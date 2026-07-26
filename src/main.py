@@ -31,6 +31,12 @@ def main() -> None:
             controller_events = inputs.poll()
 
             for controller_event in controller_events:
+                print(
+                    f"input={controller_event.event_type.value:<16} "
+                    f"control={controller_event.control.value:<18} "
+                    f"value={controller_event.value:.3f}"
+                )
+
                 action_events = mapper.map_event(
                     event=controller_event,
                     layer=layers.active_layer,

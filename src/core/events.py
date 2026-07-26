@@ -5,6 +5,7 @@ from enum import Enum
 class EventType(Enum):
     BUTTON_PRESSED = "button_pressed"
     BUTTON_RELEASED = "button_released"
+    BUTTON_HELD = "button_held"
     AXIS_CHANGED = "axis_changed"
 
 

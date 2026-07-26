@@ -2,12 +2,22 @@ from core.actions import Action, ActionEvent
 from core.events import Axis, Button, ControllerEvent, EventType
 from core.layers import Layer
 
-TEST_BUTTON_MAPPINGS: dict[Layer, dict[Button, Action]] = {
+ButtonMappingKey = tuple[Button, EventType]
+
+
+TEST_BUTTON_MAPPINGS: dict[
+    Layer,
+    dict[ButtonMappingKey, Action],
+] = {
     Layer.DEFAULT: {
-        Button.CROSS: Action.PLAY_PAUSE,
-        Button.CIRCLE: Action.CUE,
-        Button.SQUARE: Action.SYNC,
-        Button.TRIANGLE: Action.LOAD_TRACK,
+        (Button.CROSS, EventType.BUTTON_PRESSED): Action.PLAY_PAUSE,
+        (Button.CROSS, EventType.BUTTON_RELEASED): Action.PLAY_PAUSE,
+        (Button.CIRCLE, EventType.BUTTON_PRESSED): Action.CUE,
+        (Button.CIRCLE, EventType.BUTTON_RELEASED): Action.CUE,
+        (Button.SQUARE, EventType.BUTTON_PRESSED): Action.SYNC,
+        (Button.SQUARE, EventType.BUTTON_RELEASED): Action.SYNC,
+        (Button.TRIANGLE, EventType.BUTTON_PRESSED): Action.LOAD_TRACK,
+        (Button.TRIANGLE, EventType.BUTTON_RELEASED): Action.LOAD_TRACK,
     }
 }
 
@@ -25,7 +35,7 @@ TEST_AXIS_MAPPINGS: dict[Layer, dict[Axis, Action]] = {
 class ActionMapper:
     def __init__(
         self,
-        button_mappings: dict[Layer, dict[Button, Action]] | None = None,
+        button_mappings: (dict[Layer, dict[ButtonMappingKey, Action]] | None) = None,
         axis_mappings: dict[Layer, dict[Axis, Action]] | None = None,
     ) -> None:
         self._button_mappings = (
@@ -59,6 +69,7 @@ class ActionMapper:
         if event.event_type not in {
             EventType.BUTTON_PRESSED,
             EventType.BUTTON_RELEASED,
+            EventType.BUTTON_HELD,
         }:
             return []
 
@@ -66,7 +77,13 @@ class ActionMapper:
             return []
 
         layer_mappings = self._button_mappings.get(layer, {})
-        action = layer_mappings.get(event.control)
+
+        mapping_key = (
+            event.control,
+            event.event_type,
+        )
+
+        action = layer_mappings.get(mapping_key)
 
         if action is None:
             return []
@@ -106,7 +123,7 @@ class ActionMapper:
 
     def _copy_button_mappings(
         self,
-    ) -> dict[Layer, dict[Button, Action]]:
+    ) -> dict[Layer, dict[ButtonMappingKey, Action]]:
         return {
             layer: mappings.copy() for layer, mappings in TEST_BUTTON_MAPPINGS.items()
         }
