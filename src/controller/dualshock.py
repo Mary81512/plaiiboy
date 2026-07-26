@@ -1,8 +1,8 @@
 import time
-from dataclasses import dataclass
 
 import hid
 
+from core.events import Axis, Button, ControllerEvent, EventType
 
 SONY_VENDOR_ID = 0x054C
 DUALSHOCK_4_PRODUCT_ID = 0x05C4
@@ -11,48 +11,41 @@ STICK_CENTER = 128
 STICK_DEADZONE = 15
 
 
-@dataclass(frozen=True)
-class ControllerEvent:
-    event_type: str
-    control: str
-    value: int | float | None = None
-
-
 class DualShock4:
     def __init__(self) -> None:
         self._device: hid.device | None = None
-        self._previous_buttons: set[str] = set()
-        self._previous_axes: dict[str, float] = {}
+        self._previous_buttons: set[Button] = set()
+        self._previous_axes: dict[Axis, float] = {}
 
     @property
     def connected(self) -> bool:
         return self._device is not None
 
-  def connect(self, timeout: float = 10.0) -> None:
-    print("Suche DualShock 4 ...")
+    def connect(self, timeout: float = 10.0) -> None:
+        print("Suche DualShock 4 ...")
 
-    deadline = time.monotonic() + timeout
+        deadline = time.monotonic() + timeout
 
-    while time.monotonic() < deadline:
-        devices = hid.enumerate(
-            SONY_VENDOR_ID,
-            DUALSHOCK_4_PRODUCT_ID,
+        while time.monotonic() < deadline:
+            devices = hid.enumerate(
+                SONY_VENDOR_ID,
+                DUALSHOCK_4_PRODUCT_ID,
+            )
+
+            if devices:
+                device = hid.device()
+                device.open_path(devices[0]["path"])
+                device.set_nonblocking(True)
+
+                self._device = device
+                return
+
+            time.sleep(0.5)
+
+        raise RuntimeError(
+            "DualShock 4 wurde innerhalb von 10 Sekunden nicht gefunden. "
+            "Bitte PS-Taste drücken oder Bluetooth neu verbinden."
         )
-
-        if devices:
-            device = hid.device()
-            device.open_path(devices[0]["path"])
-            device.set_nonblocking(True)
-
-            self._device = device
-            return
-
-        time.sleep(0.5)
-
-    raise RuntimeError(
-        "DualShock 4 wurde innerhalb von 10 Sekunden nicht gefunden. "
-        "Bitte PS-Taste drücken oder Bluetooth neu verbinden."
-    )
 
     def close(self) -> None:
         if self._device is not None:
@@ -88,8 +81,8 @@ class DualShock4:
 
         return events
 
-    def _decode_buttons(self, report: list[int]) -> set[str]:
-        buttons: set[str] = set()
+    def _decode_buttons(self, report: list[int]) -> set[Button]:
+        buttons: set[Button] = set()
 
         buttons_1 = report[5]
         buttons_2 = report[6]
@@ -99,61 +92,63 @@ class DualShock4:
         face_bits = buttons_1 & 0xF0
 
         dpad_directions = {
-            0: "DPAD_UP",
-            1: "DPAD_UP_RIGHT",
-            2: "DPAD_RIGHT",
-            3: "DPAD_DOWN_RIGHT",
-            4: "DPAD_DOWN",
-            5: "DPAD_DOWN_LEFT",
-            6: "DPAD_LEFT",
-            7: "DPAD_UP_LEFT",
+            0: Button.DPAD_UP,
+            1: Button.DPAD_UP_RIGHT,
+            2: Button.DPAD_RIGHT,
+            3: Button.DPAD_DOWN_RIGHT,
+            4: Button.DPAD_DOWN,
+            5: Button.DPAD_DOWN_LEFT,
+            6: Button.DPAD_LEFT,
+            7: Button.DPAD_UP_LEFT,
         }
 
-        if dpad_value in dpad_directions:
-            buttons.add(dpad_directions[dpad_value])
+        dpad_button = dpad_directions.get(dpad_value)
+
+        if dpad_button is not None:
+            buttons.add(dpad_button)
 
         face_buttons = {
-            0x10: "SQUARE",
-            0x20: "CROSS",
-            0x40: "CIRCLE",
-            0x80: "TRIANGLE",
+            0x10: Button.SQUARE,
+            0x20: Button.CROSS,
+            0x40: Button.CIRCLE,
+            0x80: Button.TRIANGLE,
         }
 
-        for bit, name in face_buttons.items():
+        for bit, button in face_buttons.items():
             if face_bits & bit:
-                buttons.add(name)
+                buttons.add(button)
 
         secondary_buttons = {
-            0x01: "L1",
-            0x02: "R1",
-            0x04: "L2_BUTTON",
-            0x08: "R2_BUTTON",
-            0x10: "SHARE",
-            0x20: "OPTIONS",
-            0x40: "L3",
-            0x80: "R3",
+            0x01: Button.L1,
+            0x02: Button.R1,
+            0x04: Button.L2,
+            0x08: Button.R2,
+            0x10: Button.SHARE,
+            0x20: Button.OPTIONS,
+            0x40: Button.L3,
+            0x80: Button.R3,
         }
 
-        for bit, name in secondary_buttons.items():
+        for bit, button in secondary_buttons.items():
             if buttons_2 & bit:
-                buttons.add(name)
+                buttons.add(button)
 
         if buttons_3 & 0x01:
-            buttons.add("PS")
+            buttons.add(Button.PS)
 
         if buttons_3 & 0x02:
-            buttons.add("TOUCHPAD_CLICK")
+            buttons.add(Button.TOUCHPAD_CLICK)
 
         return buttons
 
-    def _decode_axes(self, report: list[int]) -> dict[str, float]:
+    def _decode_axes(self, report: list[int]) -> dict[Axis, float]:
         return {
-            "LEFT_X": self._normalize_stick(report[1]),
-            "LEFT_Y": self._normalize_stick(report[2]),
-            "RIGHT_X": self._normalize_stick(report[3]),
-            "RIGHT_Y": self._normalize_stick(report[4]),
-            "L2": report[8] / 255,
-            "R2": report[9] / 255,
+            Axis.LEFT_X: self._normalize_stick(report[1]),
+            Axis.LEFT_Y: self._normalize_stick(report[2]),
+            Axis.RIGHT_X: self._normalize_stick(report[3]),
+            Axis.RIGHT_Y: self._normalize_stick(report[4]),
+            Axis.L2: round(report[8] / 255, 3),
+            Axis.R2: round(report[9] / 255, 3),
         }
 
     def _normalize_stick(self, raw_value: int) -> float:
@@ -169,28 +164,28 @@ class DualShock4:
 
     def _create_button_events(
         self,
-        current_buttons: set[str],
+        current_buttons: set[Button],
     ) -> list[ControllerEvent]:
         events: list[ControllerEvent] = []
 
         pressed = current_buttons - self._previous_buttons
         released = self._previous_buttons - current_buttons
 
-        for button in sorted(pressed):
+        for button in sorted(pressed, key=lambda item: item.value):
             events.append(
                 ControllerEvent(
-                    event_type="button_pressed",
+                    event_type=EventType.BUTTON_PRESSED,
                     control=button,
-                    value=1,
+                    value=1.0,
                 )
             )
 
-        for button in sorted(released):
+        for button in sorted(released, key=lambda item: item.value):
             events.append(
                 ControllerEvent(
-                    event_type="button_released",
+                    event_type=EventType.BUTTON_RELEASED,
                     control=button,
-                    value=0,
+                    value=0.0,
                 )
             )
 
@@ -200,15 +195,15 @@ class DualShock4:
 
     def _create_axis_events(
         self,
-        current_axes: dict[str, float],
+        current_axes: dict[Axis, float],
     ) -> list[ControllerEvent]:
         events: list[ControllerEvent] = []
 
-        for axis_name, value in current_axes.items():
-            previous_value = self._previous_axes.get(axis_name)
+        for axis, value in current_axes.items():
+            previous_value = self._previous_axes.get(axis)
 
             if previous_value is None:
-                self._previous_axes[axis_name] = value
+                self._previous_axes[axis] = value
                 continue
 
             if abs(value - previous_value) < 0.05:
@@ -216,12 +211,12 @@ class DualShock4:
 
             events.append(
                 ControllerEvent(
-                    event_type="axis_changed",
-                    control=axis_name,
+                    event_type=EventType.AXIS_CHANGED,
+                    control=axis,
                     value=value,
                 )
             )
 
-            self._previous_axes[axis_name] = value
+            self._previous_axes[axis] = value
 
         return events

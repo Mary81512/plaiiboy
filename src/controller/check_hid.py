@@ -2,7 +2,6 @@ import time
 
 import hid
 
-
 SONY_VENDOR_ID = 0x054C
 DUALSHOCK_4_PRODUCT_ID = 0x05C4
 

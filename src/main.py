@@ -1,23 +1,21 @@
-from controller.dualshock import DualShock4
+from controller.input_manager import InputManager
 
 
 def main() -> None:
-    controller = DualShock4()
+    inputs = InputManager()
 
     try:
-        controller.connect()
+        inputs.connect()
 
         print("plaiiboy")
-        print("DualShock 4 verbunden.")
+        print("Input Manager gestartet.")
         print("Beenden mit Ctrl + C.\n")
 
         while True:
-            events = controller.poll()
-
-            for event in events:
+            for event in inputs.poll():
                 print(
-                    f"{event.event_type:<16} "
-                    f"{event.control:<18} "
+                    f"{event.event_type.value:<16}"
+                    f"{event.control.value:<18}"
                     f"{event.value}"
                 )
 
@@ -25,7 +23,7 @@ def main() -> None:
         print("\nProgramm beendet.")
 
     finally:
-        controller.close()
+        inputs.close()
 
 
 if __name__ == "__main__":
