@@ -10,6 +10,11 @@ class Action(Enum):
     SYNC = "SYNC"
     LOAD_TRACK = "LOAD_TRACK"
 
+    LEFT_STICK_X = "LEFT_STICK_X"
+    LEFT_STICK_Y = "LEFT_STICK_Y"
+    LEFT_TRIGGER = "LEFT_TRIGGER"
+    RIGHT_TRIGGER = "RIGHT_TRIGGER"
+
 
 @dataclass(frozen=True)
 class ActionEvent:

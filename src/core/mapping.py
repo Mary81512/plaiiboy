@@ -1,8 +1,8 @@
 from core.actions import Action, ActionEvent
-from core.events import Button, ControllerEvent, EventType
+from core.events import Axis, Button, ControllerEvent, EventType
 from core.layers import Layer
 
-TEST_MAPPINGS: dict[Layer, dict[Button, Action]] = {
+TEST_BUTTON_MAPPINGS: dict[Layer, dict[Button, Action]] = {
     Layer.DEFAULT: {
         Button.CROSS: Action.PLAY_PAUSE,
         Button.CIRCLE: Action.CUE,
@@ -12,13 +12,30 @@ TEST_MAPPINGS: dict[Layer, dict[Button, Action]] = {
 }
 
 
+TEST_AXIS_MAPPINGS: dict[Layer, dict[Axis, Action]] = {
+    Layer.DEFAULT: {
+        Axis.LEFT_X: Action.LEFT_STICK_X,
+        Axis.LEFT_Y: Action.LEFT_STICK_Y,
+        Axis.L2: Action.LEFT_TRIGGER,
+        Axis.R2: Action.RIGHT_TRIGGER,
+    }
+}
+
+
 class ActionMapper:
     def __init__(
         self,
-        mappings: dict[Layer, dict[Button, Action]] | None = None,
+        button_mappings: dict[Layer, dict[Button, Action]] | None = None,
+        axis_mappings: dict[Layer, dict[Axis, Action]] | None = None,
     ) -> None:
-        self._mappings = (
-            mappings if mappings is not None else self._copy_test_mappings()
+        self._button_mappings = (
+            button_mappings
+            if button_mappings is not None
+            else self._copy_button_mappings()
+        )
+
+        self._axis_mappings = (
+            axis_mappings if axis_mappings is not None else self._copy_axis_mappings()
         )
 
     def map_event(
@@ -26,17 +43,29 @@ class ActionMapper:
         event: ControllerEvent,
         layer: Layer,
     ) -> list[ActionEvent]:
-        if event.event_type is not EventType.BUTTON_PRESSED:
+        if isinstance(event.control, Button):
+            return self._map_button_event(event, layer)
+
+        if isinstance(event.control, Axis):
+            return self._map_axis_event(event, layer)
+
+        return []
+
+    def _map_button_event(
+        self,
+        event: ControllerEvent,
+        layer: Layer,
+    ) -> list[ActionEvent]:
+        if event.event_type not in {
+            EventType.BUTTON_PRESSED,
+            EventType.BUTTON_RELEASED,
+        }:
             return []
 
         if not isinstance(event.control, Button):
             return []
 
-        layer_mappings = self._mappings.get(layer)
-
-        if layer_mappings is None:
-            return []
-
+        layer_mappings = self._button_mappings.get(layer, {})
         action = layer_mappings.get(event.control)
 
         if action is None:
@@ -50,8 +79,41 @@ class ActionMapper:
             )
         ]
 
-    def _copy_test_mappings(self) -> dict[Layer, dict[Button, Action]]:
+    def _map_axis_event(
+        self,
+        event: ControllerEvent,
+        layer: Layer,
+    ) -> list[ActionEvent]:
+        if event.event_type is not EventType.AXIS_CHANGED:
+            return []
+
+        if not isinstance(event.control, Axis):
+            return []
+
+        layer_mappings = self._axis_mappings.get(layer, {})
+        action = layer_mappings.get(event.control)
+
+        if action is None:
+            return []
+
+        return [
+            ActionEvent(
+                action=action,
+                value=event.value,
+                source_event=event,
+            )
+        ]
+
+    def _copy_button_mappings(
+        self,
+    ) -> dict[Layer, dict[Button, Action]]:
         return {
-            layer: layer_mappings.copy()
-            for layer, layer_mappings in TEST_MAPPINGS.items()
+            layer: mappings.copy() for layer, mappings in TEST_BUTTON_MAPPINGS.items()
+        }
+
+    def _copy_axis_mappings(
+        self,
+    ) -> dict[Layer, dict[Axis, Action]]:
+        return {
+            layer: mappings.copy() for layer, mappings in TEST_AXIS_MAPPINGS.items()
         }
