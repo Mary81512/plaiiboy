@@ -2,7 +2,8 @@ import time
 
 import hid
 
-from core.events import Axis, Button, ControllerEvent, EventType
+from controller.state import ControllerState
+from core.events import Axis, Button
 
 SONY_VENDOR_ID = 0x054C
 DUALSHOCK_4_PRODUCT_ID = 0x05C4
@@ -14,8 +15,6 @@ STICK_DEADZONE = 15
 class DualShock4:
     def __init__(self) -> None:
         self._device: hid.device | None = None
-        self._previous_buttons: set[Button] = set()
-        self._previous_axes: dict[Axis, float] = {}
 
     @property
     def connected(self) -> bool:
@@ -52,7 +51,7 @@ class DualShock4:
             self._device.close()
             self._device = None
 
-    def poll(self) -> list[ControllerEvent]:
+    def poll(self) -> ControllerState | None:
         if self._device is None:
             raise RuntimeError("Controller ist nicht verbunden.")
 
@@ -66,20 +65,15 @@ class DualShock4:
 
         if not report:
             time.sleep(0.005)
-            return []
+            return None
 
         if len(report) < 10 or report[0] != 0x01:
-            return []
+            return None
 
-        events: list[ControllerEvent] = []
-
-        current_buttons = self._decode_buttons(report)
-        events.extend(self._create_button_events(current_buttons))
-
-        current_axes = self._decode_axes(report)
-        events.extend(self._create_axis_events(current_axes))
-
-        return events
+        return ControllerState(
+            buttons=frozenset(self._decode_buttons(report)),
+            axes=self._decode_axes(report),
+        )
 
     def _decode_buttons(self, report: list[int]) -> set[Button]:
         buttons: set[Button] = set()
@@ -161,62 +155,3 @@ class DualShock4:
             return round(difference / STICK_CENTER, 3)
 
         return round(difference / 127, 3)
-
-    def _create_button_events(
-        self,
-        current_buttons: set[Button],
-    ) -> list[ControllerEvent]:
-        events: list[ControllerEvent] = []
-
-        pressed = current_buttons - self._previous_buttons
-        released = self._previous_buttons - current_buttons
-
-        for button in sorted(pressed, key=lambda item: item.value):
-            events.append(
-                ControllerEvent(
-                    event_type=EventType.BUTTON_PRESSED,
-                    control=button,
-                    value=1.0,
-                )
-            )
-
-        for button in sorted(released, key=lambda item: item.value):
-            events.append(
-                ControllerEvent(
-                    event_type=EventType.BUTTON_RELEASED,
-                    control=button,
-                    value=0.0,
-                )
-            )
-
-        self._previous_buttons = current_buttons
-
-        return events
-
-    def _create_axis_events(
-        self,
-        current_axes: dict[Axis, float],
-    ) -> list[ControllerEvent]:
-        events: list[ControllerEvent] = []
-
-        for axis, value in current_axes.items():
-            previous_value = self._previous_axes.get(axis)
-
-            if previous_value is None:
-                self._previous_axes[axis] = value
-                continue
-
-            if abs(value - previous_value) < 0.05:
-                continue
-
-            events.append(
-                ControllerEvent(
-                    event_type=EventType.AXIS_CHANGED,
-                    control=axis,
-                    value=value,
-                )
-            )
-
-            self._previous_axes[axis] = value
-
-        return events

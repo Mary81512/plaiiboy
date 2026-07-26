@@ -1,10 +1,12 @@
 from controller.dualshock import DualShock4
+from controller.event_generator import EventGenerator
 from core.events import ControllerEvent
 
 
 class InputManager:
     def __init__(self) -> None:
         self._controller = DualShock4()
+        self._event_generator = EventGenerator()
 
     def connect(self) -> None:
         self._controller.connect()
@@ -13,4 +15,9 @@ class InputManager:
         self._controller.close()
 
     def poll(self) -> list[ControllerEvent]:
-        return self._controller.poll()
+        state = self._controller.poll()
+
+        if state is None:
+            return []
+
+        return self._event_generator.generate(state)
