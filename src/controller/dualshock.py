@@ -1,119 +1,227 @@
-import pygame
-from pygame._sdl2 import controller
+import time
+from dataclasses import dataclass
+
+import hid
 
 
-WINDOW_WIDTH = 700
-WINDOW_HEIGHT = 260
-DEADZONE = 3000
+SONY_VENDOR_ID = 0x054C
+DUALSHOCK_4_PRODUCT_ID = 0x05C4
+
+STICK_CENTER = 128
+STICK_DEADZONE = 15
 
 
-def main() -> None:
-    pygame.init()
-    pygame.display.set_caption("plaiiboy controller test")
+@dataclass(frozen=True)
+class ControllerEvent:
+    event_type: str
+    control: str
+    value: int | float | None = None
 
-    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-    font = pygame.font.Font(None, 30)
-    small_font = pygame.font.Font(None, 24)
 
-    controller.init()
-    controller.set_eventstate(True)
+class DualShock4:
+    def __init__(self) -> None:
+        self._device: hid.device | None = None
+        self._previous_buttons: set[str] = set()
+        self._previous_axes: dict[str, float] = {}
 
-    if controller.get_count() == 0:
-        raise RuntimeError("Kein Controller gefunden.")
+    @property
+    def connected(self) -> bool:
+        return self._device is not None
 
-    if not controller.is_controller(0):
-        raise RuntimeError(
-            "Gerät 0 wird nicht als unterstützter Controller erkannt."
+  def connect(self, timeout: float = 10.0) -> None:
+    print("Suche DualShock 4 ...")
+
+    deadline = time.monotonic() + timeout
+
+    while time.monotonic() < deadline:
+        devices = hid.enumerate(
+            SONY_VENDOR_ID,
+            DUALSHOCK_4_PRODUCT_ID,
         )
 
-    gamepad = controller.Controller(0)
-    controller_name = controller.name_forindex(0)
+        if devices:
+            device = hid.device()
+            device.open_path(devices[0]["path"])
+            device.set_nonblocking(True)
 
-    last_event = "Noch keine Eingabe erkannt."
-    running = True
-    clock = pygame.time.Clock()
+            self._device = device
+            return
 
-    print("plaiiboy - live input test")
-    print("--------------------------")
-    print(f"Controller: {controller_name}")
-    print("Testfenster geöffnet.")
-    print("Zum Beenden Fenster schließen oder Escape drücken.\n")
+        time.sleep(0.5)
 
-    try:
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
+    raise RuntimeError(
+        "DualShock 4 wurde innerhalb von 10 Sekunden nicht gefunden. "
+        "Bitte PS-Taste drücken oder Bluetooth neu verbinden."
+    )
 
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        running = False
+    def close(self) -> None:
+        if self._device is not None:
+            self._device.close()
+            self._device = None
 
-                elif event.type == pygame.CONTROLLERBUTTONDOWN:
-                    last_event = f"BUTTON DOWN | button={event.button}"
-                    print(last_event)
+    def poll(self) -> list[ControllerEvent]:
+        if self._device is None:
+            raise RuntimeError("Controller ist nicht verbunden.")
 
-                elif event.type == pygame.CONTROLLERBUTTONUP:
-                    last_event = f"BUTTON UP | button={event.button}"
-                    print(last_event)
+        try:
+            report = self._device.read(78)
+        except OSError as error:
+            self.close()
+            raise RuntimeError(
+                "Verbindung zum Controller wurde unterbrochen."
+            ) from error
 
-                elif event.type == pygame.CONTROLLERAXISMOTION:
-                    if abs(event.value) > DEADZONE:
-                        last_event = (
-                            f"AXIS | axis={event.axis} | value={event.value}"
-                        )
-                        print(last_event)
+        if not report:
+            time.sleep(0.005)
+            return []
 
-                elif event.type in (
-                    pygame.CONTROLLERTOUCHPADDOWN,
-                    pygame.CONTROLLERTOUCHPADMOTION,
-                    pygame.CONTROLLERTOUCHPADUP,
-                ):
-                    last_event = (
-                        f"{pygame.event.event_name(event.type)} | {event}"
-                    )
-                    print(last_event)
+        if len(report) < 10 or report[0] != 0x01:
+            return []
 
-                elif event.type == pygame.CONTROLLERDEVICEREMOVED:
-                    last_event = "Controller wurde getrennt."
-                    print(last_event)
+        events: list[ControllerEvent] = []
 
-            screen.fill((25, 25, 30))
+        current_buttons = self._decode_buttons(report)
+        events.extend(self._create_button_events(current_buttons))
 
-            title = font.render(
-                "plaiiboy – Controller-Test",
-                True,
-                (240, 240, 240),
+        current_axes = self._decode_axes(report)
+        events.extend(self._create_axis_events(current_axes))
+
+        return events
+
+    def _decode_buttons(self, report: list[int]) -> set[str]:
+        buttons: set[str] = set()
+
+        buttons_1 = report[5]
+        buttons_2 = report[6]
+        buttons_3 = report[7]
+
+        dpad_value = buttons_1 & 0x0F
+        face_bits = buttons_1 & 0xF0
+
+        dpad_directions = {
+            0: "DPAD_UP",
+            1: "DPAD_UP_RIGHT",
+            2: "DPAD_RIGHT",
+            3: "DPAD_DOWN_RIGHT",
+            4: "DPAD_DOWN",
+            5: "DPAD_DOWN_LEFT",
+            6: "DPAD_LEFT",
+            7: "DPAD_UP_LEFT",
+        }
+
+        if dpad_value in dpad_directions:
+            buttons.add(dpad_directions[dpad_value])
+
+        face_buttons = {
+            0x10: "SQUARE",
+            0x20: "CROSS",
+            0x40: "CIRCLE",
+            0x80: "TRIANGLE",
+        }
+
+        for bit, name in face_buttons.items():
+            if face_bits & bit:
+                buttons.add(name)
+
+        secondary_buttons = {
+            0x01: "L1",
+            0x02: "R1",
+            0x04: "L2_BUTTON",
+            0x08: "R2_BUTTON",
+            0x10: "SHARE",
+            0x20: "OPTIONS",
+            0x40: "L3",
+            0x80: "R3",
+        }
+
+        for bit, name in secondary_buttons.items():
+            if buttons_2 & bit:
+                buttons.add(name)
+
+        if buttons_3 & 0x01:
+            buttons.add("PS")
+
+        if buttons_3 & 0x02:
+            buttons.add("TOUCHPAD_CLICK")
+
+        return buttons
+
+    def _decode_axes(self, report: list[int]) -> dict[str, float]:
+        return {
+            "LEFT_X": self._normalize_stick(report[1]),
+            "LEFT_Y": self._normalize_stick(report[2]),
+            "RIGHT_X": self._normalize_stick(report[3]),
+            "RIGHT_Y": self._normalize_stick(report[4]),
+            "L2": report[8] / 255,
+            "R2": report[9] / 255,
+        }
+
+    def _normalize_stick(self, raw_value: int) -> float:
+        difference = raw_value - STICK_CENTER
+
+        if abs(difference) <= STICK_DEADZONE:
+            return 0.0
+
+        if difference < 0:
+            return round(difference / STICK_CENTER, 3)
+
+        return round(difference / 127, 3)
+
+    def _create_button_events(
+        self,
+        current_buttons: set[str],
+    ) -> list[ControllerEvent]:
+        events: list[ControllerEvent] = []
+
+        pressed = current_buttons - self._previous_buttons
+        released = self._previous_buttons - current_buttons
+
+        for button in sorted(pressed):
+            events.append(
+                ControllerEvent(
+                    event_type="button_pressed",
+                    control=button,
+                    value=1,
+                )
             )
-            name_text = small_font.render(
-                f"Controller: {controller_name}",
-                True,
-                (220, 220, 220),
-            )
-            event_text = small_font.render(
-                last_event,
-                True,
-                (220, 220, 220),
-            )
-            help_text = small_font.render(
-                "Tasten drücken oder Sticks bewegen – Escape beendet.",
-                True,
-                (180, 180, 180),
+
+        for button in sorted(released):
+            events.append(
+                ControllerEvent(
+                    event_type="button_released",
+                    control=button,
+                    value=0,
+                )
             )
 
-            screen.blit(title, (30, 30))
-            screen.blit(name_text, (30, 90))
-            screen.blit(event_text, (30, 135))
-            screen.blit(help_text, (30, 190))
+        self._previous_buttons = current_buttons
 
-            pygame.display.flip()
-            clock.tick(60)
+        return events
 
-    finally:
-        gamepad.quit()
-        controller.quit()
-        pygame.quit()
+    def _create_axis_events(
+        self,
+        current_axes: dict[str, float],
+    ) -> list[ControllerEvent]:
+        events: list[ControllerEvent] = []
 
+        for axis_name, value in current_axes.items():
+            previous_value = self._previous_axes.get(axis_name)
 
-if __name__ == "__main__":
-    main()
+            if previous_value is None:
+                self._previous_axes[axis_name] = value
+                continue
+
+            if abs(value - previous_value) < 0.05:
+                continue
+
+            events.append(
+                ControllerEvent(
+                    event_type="axis_changed",
+                    control=axis_name,
+                    value=value,
+                )
+            )
+
+            self._previous_axes[axis_name] = value
+
+        return events
