@@ -12,3 +12,7 @@ class Dispatcher:
     def dispatch(self, event: ActionEvent) -> None:
         for output in self._outputs:
             output.handle(event)
+
+    def close(self) -> None:
+        for output in self._outputs:
+            output.close()

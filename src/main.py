@@ -3,6 +3,7 @@ from core.dispatcher import Dispatcher
 from core.layers import LayerManager
 from core.mapping import ActionMapper
 from outputs.debug import DebugOutput
+from outputs.midi import MidiOutput
 
 
 def main() -> None:
@@ -10,15 +11,20 @@ def main() -> None:
     layers = LayerManager()
     mapper = ActionMapper()
 
+    midi_output = MidiOutput()
+
     dispatcher = Dispatcher()
     dispatcher.add_output(DebugOutput())
+    dispatcher.add_output(midi_output)
 
     try:
         inputs.connect()
+        midi_output.connect()
 
         print("plaiiboy")
         print("Framework gestartet.")
         print(f"Aktiver Layer: {layers.active_layer.value}")
+        print("Virtueller MIDI-Port: plaiiboy")
         print("Beenden mit Ctrl + C.\n")
 
         while True:
@@ -37,6 +43,7 @@ def main() -> None:
         print("\nProgramm beendet.")
 
     finally:
+        dispatcher.close()
         inputs.close()
 
 
