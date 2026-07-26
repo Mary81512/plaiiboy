@@ -70,6 +70,7 @@ class ActionMapper:
             EventType.BUTTON_PRESSED,
             EventType.BUTTON_RELEASED,
             EventType.BUTTON_HELD,
+            EventType.BUTTON_DOUBLE_PRESSED,
         }:
             return []
 

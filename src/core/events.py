@@ -6,6 +6,7 @@ class EventType(Enum):
     BUTTON_PRESSED = "button_pressed"
     BUTTON_RELEASED = "button_released"
     BUTTON_HELD = "button_held"
+    BUTTON_DOUBLE_PRESSED = "button_double_pressed"
     AXIS_CHANGED = "axis_changed"
 
 
