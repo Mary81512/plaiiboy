@@ -1,7 +1,7 @@
 from collections.abc import Callable
 
 from core.actions import Action, ActionEvent
-from core.performance_state import Deck, PerformanceState
+from core.performance_state import BrowserFocus, Deck, PerformanceState
 
 ActionHandler = Callable[
     [ActionEvent],
@@ -20,10 +20,14 @@ class ActionProcessor:
             Action,
             ActionHandler,
         ] = {
-            Action.TOGGLE_ACTIVE_DECK: (self._toggle_active_deck),
-            Action.CYCLE_SEEK_SPEED: (self._cycle_seek_speed),
-            Action.ACTIVE_DECK_SEEK_BACKWARD: (self._seek_backward),
-            Action.ACTIVE_DECK_SEEK_FORWARD: (self._seek_forward),
+            Action.TOGGLE_ACTIVE_DECK: self._toggle_active_deck,
+            Action.CYCLE_SEEK_SPEED: self._cycle_seek_speed,
+            Action.ACTIVE_DECK_SEEK_BACKWARD: self._seek_backward,
+            Action.ACTIVE_DECK_SEEK_FORWARD: self._seek_forward,
+            Action.BROWSER_UP: self._browser_up,
+            Action.BROWSER_DOWN: self._browser_down,
+            Action.BROWSER_LEVEL_UP: self._browser_level_up,
+            Action.BROWSER_LEVEL_DOWN: self._browser_level_down,
         }
 
     @property
@@ -85,6 +89,44 @@ class ActionProcessor:
             )
         ]
 
+    def _browser_up(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        action = (
+            Action.BROWSER_TREE_UP
+            if self._state.browser_focus is BrowserFocus.TREE
+            else Action.BROWSER_LIST_UP
+        )
+
+        return [self._replace_action(event, action)]
+
+    def _browser_down(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        action = (
+            Action.BROWSER_TREE_DOWN
+            if self._state.browser_focus is BrowserFocus.TREE
+            else Action.BROWSER_LIST_DOWN
+        )
+
+        return [self._replace_action(event, action)]
+
+    def _browser_level_down(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        self._state.set_browser_focus(BrowserFocus.LIST)
+        return [event]
+
+    def _browser_level_up(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        self._state.set_browser_focus(BrowserFocus.TREE)
+        return [event]
+
     def _seek_backward(
         self,
         event: ActionEvent,
@@ -140,15 +182,15 @@ class ActionProcessor:
     ) -> Action | None:
         if self._state.active_deck is Deck.DECK_1:
             mappings = {
-                Action.ACTIVE_DECK_HOTCUE_PREVIOUS: (Action.DECK_1_HOTCUE_PREVIOUS),
-                Action.ACTIVE_DECK_HOTCUE_NEXT: (Action.DECK_1_HOTCUE_NEXT),
-                Action.ACTIVE_DECK_HOTCUE_TOGGLE: (Action.DECK_1_HOTCUE_TOGGLE),
+                Action.ACTIVE_DECK_HOTCUE_PREVIOUS: Action.DECK_1_HOTCUE_PREVIOUS,
+                Action.ACTIVE_DECK_HOTCUE_NEXT: Action.DECK_1_HOTCUE_NEXT,
+                Action.ACTIVE_DECK_HOTCUE_TOGGLE: Action.DECK_1_HOTCUE_TOGGLE,
             }
         else:
             mappings = {
-                Action.ACTIVE_DECK_HOTCUE_PREVIOUS: (Action.DECK_2_HOTCUE_PREVIOUS),
-                Action.ACTIVE_DECK_HOTCUE_NEXT: (Action.DECK_2_HOTCUE_NEXT),
-                Action.ACTIVE_DECK_HOTCUE_TOGGLE: (Action.DECK_2_HOTCUE_TOGGLE),
+                Action.ACTIVE_DECK_HOTCUE_PREVIOUS: Action.DECK_2_HOTCUE_PREVIOUS,
+                Action.ACTIVE_DECK_HOTCUE_NEXT: Action.DECK_2_HOTCUE_NEXT,
+                Action.ACTIVE_DECK_HOTCUE_TOGGLE: Action.DECK_2_HOTCUE_TOGGLE,
             }
 
         return mappings.get(action)

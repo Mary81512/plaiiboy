@@ -9,10 +9,16 @@ class Deck(Enum):
     DECK_2 = 2
 
 
+class BrowserFocus(Enum):
+    TREE = 1
+    LIST = 2
+
+
 @dataclass
 class PerformanceState:
     active_deck: Deck = Deck.DECK_1
     seek_speed_index: int = 0
+    browser_focus: BrowserFocus = BrowserFocus.TREE
 
     @property
     def seek_speed(self) -> int:
@@ -30,3 +36,10 @@ class PerformanceState:
         self.seek_speed_index = (self.seek_speed_index + 1) % len(SEEK_SPEEDS)
 
         return self.seek_speed
+
+    def set_browser_focus(
+        self,
+        focus: BrowserFocus,
+    ) -> BrowserFocus:
+        self.browser_focus = focus
+        return self.browser_focus
