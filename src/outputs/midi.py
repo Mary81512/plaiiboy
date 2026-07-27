@@ -30,6 +30,7 @@ class MidiControlChangeMapping:
 
 MidiMapping = MidiNoteMapping | MidiControlChangeMapping
 
+
 MIDI_MAPPINGS: dict[Action, MidiMapping] = {
     # Deck 1
     Action.DECK_1_PLAY_TOGGLE: MidiNoteMapping(note=36),
@@ -79,16 +80,25 @@ MIDI_MAPPINGS: dict[Action, MidiMapping] = {
 
 
 class MidiOutput(Output):
+    """
+    Übersetzt ActionEvents in MIDI-Nachrichten.
+
+    Im Debug-Modus wird jede tatsächlich versendete
+    MIDI-Nachricht im Terminal angezeigt.
+    """
+
     def __init__(
         self,
         port_name: str = "plaiiboy",
         mappings: dict[Action, MidiMapping] | None = None,
+        debug: bool = True,
     ) -> None:
         self._port_name = port_name
         self._mappings = (
             mappings.copy() if mappings is not None else MIDI_MAPPINGS.copy()
         )
 
+        self._debug = debug
         self._port: mido.ports.BaseOutput | None = None
 
     @property
@@ -104,20 +114,35 @@ class MidiOutput(Output):
             virtual=True,
         )
 
-    def handle(self, event: ActionEvent) -> None:
+        if self._debug:
+            print(f'[MIDI] Virtueller Ausgang "{self._port_name}" verbunden.')
+
+    def handle(
+        self,
+        event: ActionEvent,
+    ) -> None:
         if self._port is None:
             raise RuntimeError("MIDI-Ausgang ist nicht verbunden.")
 
         mapping = self._mappings.get(event.action)
 
         if mapping is None:
+            if self._debug:
+                print(f"[MIDI SKIP] Kein Mapping für {event.action.name}")
+
             return
 
         if isinstance(mapping, MidiNoteMapping):
-            self._send_note(event, mapping)
+            self._send_note(
+                event,
+                mapping,
+            )
             return
 
-        self._send_control_change(event, mapping)
+        self._send_control_change(
+            event,
+            mapping,
+        )
 
     def _send_note(
         self,
@@ -125,7 +150,10 @@ class MidiOutput(Output):
         mapping: MidiNoteMapping,
     ) -> None:
         if mapping.mode is MidiNoteMode.GATE:
-            self._send_gate_note(event, mapping)
+            self._send_gate_note(
+                event,
+                mapping,
+            )
             return
 
         self._send_pulse_note(mapping)
@@ -135,9 +163,6 @@ class MidiOutput(Output):
         event: ActionEvent,
         mapping: MidiNoteMapping,
     ) -> None:
-        if self._port is None:
-            return
-
         event_type = event.source_event.event_type
 
         if event_type is EventType.BUTTON_PRESSED:
@@ -157,17 +182,21 @@ class MidiOutput(Output):
             )
 
         else:
+            if self._debug:
+                print(
+                    "[MIDI SKIP] "
+                    f"Gate-Note {mapping.note} ignoriert "
+                    f"Eventtyp {event_type.name}"
+                )
+
             return
 
-        self._port.send(message)
+        self._send_message(message)
 
     def _send_pulse_note(
         self,
         mapping: MidiNoteMapping,
     ) -> None:
-        if self._port is None:
-            return
-
         note_on = mido.Message(  # type: ignore[attr-defined]
             "note_on",
             note=mapping.note,
@@ -182,17 +211,14 @@ class MidiOutput(Output):
             channel=mapping.channel,
         )
 
-        self._port.send(note_on)
-        self._port.send(note_off)
+        self._send_message(note_on)
+        self._send_message(note_off)
 
     def _send_control_change(
         self,
         event: ActionEvent,
         mapping: MidiControlChangeMapping,
     ) -> None:
-        if self._port is None:
-            return
-
         midi_value = self._to_midi_value(
             event.value,
             bipolar=mapping.bipolar,
@@ -205,7 +231,32 @@ class MidiOutput(Output):
             channel=mapping.channel,
         )
 
+        self._send_message(message)
+
+    def _send_message(
+        self,
+        message: mido.Message,
+    ) -> None:
+        if self._port is None:
+            raise RuntimeError("MIDI-Ausgang ist nicht verbunden.")
+
         self._port.send(message)
+
+        if self._debug:
+            self._print_message(message)
+
+    def _print_message(
+        self,
+        message: mido.Message,
+    ) -> None:
+        """
+        Nutzt die eigene Textdarstellung von mido.Message.
+
+        Mido erzeugt Attribute wie note, velocity, control und value
+        dynamisch abhängig vom Nachrichtentyp. Die direkte Ausgabe
+        vermeidet deshalb falsche Pylance-Warnungen.
+        """
+        print(f"[MIDI OUT] {message}")
 
     def _to_midi_value(
         self,
@@ -217,11 +268,22 @@ class MidiOutput(Output):
         else:
             normalized = value
 
-        normalized = max(0.0, min(1.0, normalized))
+        normalized = max(
+            0.0,
+            min(
+                1.0,
+                normalized,
+            ),
+        )
 
         return round(normalized * 127)
 
     def close(self) -> None:
-        if self._port is not None:
-            self._port.close()
-            self._port = None
+        if self._port is None:
+            return
+
+        self._port.close()
+        self._port = None
+
+        if self._debug:
+            print(f'[MIDI] Virtueller Ausgang "{self._port_name}" geschlossen.')
