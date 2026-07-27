@@ -1,10 +1,10 @@
-from config import (
+from controller.state import ControllerState, TouchPoint
+from controller_config import (
     SWIPE_AXIS_DOMINANCE,
     SWIPE_DISTANCE_THRESHOLD,
     TOUCHPAD_MAX_X,
     TOUCHPAD_MAX_Y,
 )
-from controller.state import ControllerState, TouchPoint
 from core.events import ControllerEvent, EventType, TouchGesture
 
 

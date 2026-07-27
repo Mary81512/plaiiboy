@@ -3,7 +3,8 @@ import zlib
 
 import hid
 
-from config import (
+from controller.state import ControllerState, TouchPoint
+from controller_config import (
     BLUETOOTH_HARDWARE_CONTROL,
     BLUETOOTH_INPUT_REPORT_ID,
     BLUETOOTH_OUTPUT_CRC_SEED,
@@ -16,10 +17,6 @@ from config import (
     STICK_NEGATIVE_RANGE,
     STICK_POSITIVE_RANGE,
 )
-from controller.state import ControllerState, TouchPoint
-from core.events import Axis, Button
-)
-from controller.state import ControllerState, TouchPoint
 from core.events import Axis, Button
 
 

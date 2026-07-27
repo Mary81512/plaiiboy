@@ -1,13 +1,13 @@
 import time
 
-from config import (
+from controller.state import ControllerState
+from controller_config import (
     AXIS_CHANGE_THRESHOLD,
     AXIS_RELEASE_THRESHOLD,
     AXIS_TRIGGER_THRESHOLD,
     BUTTON_DOUBLE_PRESS_THRESHOLD,
     BUTTON_HOLD_THRESHOLD,
 )
-from controller.state import ControllerState
 from core.events import Axis, Button, ControllerEvent, EventType
 
 
@@ -221,7 +221,10 @@ class EventGenerator:
         for axis, value in state.axes.items():
             previous_value = previous.axes.get(axis)
 
-            if previous_value is not None and abs(value - previous_value) >= AXIS_CHANGE_THRESHOLD
+            if (
+                previous_value is not None
+                and abs(value - previous_value) >= AXIS_CHANGE_THRESHOLD
+            ):
                 events.append(
                     ControllerEvent(
                         event_type=EventType.AXIS_CHANGED,

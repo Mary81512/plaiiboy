@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 
-from config import SEEK_SPEEDS
+from controller_config import SEEK_SPEEDS
 
 
 class Deck(Enum):
