@@ -1,12 +1,18 @@
 import time
+import zlib
 
 import hid
 
-from controller.state import ControllerState
+from controller.state import ControllerState, TouchPoint
 from core.events import Axis, Button
 
 SONY_VENDOR_ID = 0x054C
 DUALSHOCK_4_PRODUCT_ID = 0x05C4
+
+BLUETOOTH_INPUT_REPORT_ID = 0x11
+BLUETOOTH_OUTPUT_REPORT_ID = 0x11
+BLUETOOTH_REPORT_SIZE = 78
+BLUETOOTH_OUTPUT_CRC_SEED = 0xA2
 
 STICK_CENTER = 128
 STICK_DEADZONE = 15
@@ -37,6 +43,11 @@ class DualShock4:
                 device.set_nonblocking(True)
 
                 self._device = device
+                self._enable_full_bluetooth_reports()
+
+                print("DualShock 4 verbunden.")
+                print("Bluetooth-Vollmodus aktiviert.")
+
                 return
 
             time.sleep(0.5)
@@ -56,9 +67,10 @@ class DualShock4:
             raise RuntimeError("Controller ist nicht verbunden.")
 
         try:
-            report = self._device.read(78)
+            report = self._device.read(BLUETOOTH_REPORT_SIZE)
         except OSError as error:
             self.close()
+
             raise RuntimeError(
                 "Verbindung zum Controller wurde unterbrochen."
             ) from error
@@ -67,20 +79,106 @@ class DualShock4:
             time.sleep(0.005)
             return None
 
-        if len(report) < 10 or report[0] != 0x01:
-            return None
+        if (
+            len(report) == BLUETOOTH_REPORT_SIZE
+            and report[0] == BLUETOOTH_INPUT_REPORT_ID
+        ):
+            return self._decode_bluetooth_state(report)
 
-        return ControllerState(
-            buttons=frozenset(self._decode_buttons(report)),
-            axes=self._decode_axes(report),
+        # Der Controller kann während des Umschaltens noch kurz einen
+        # 10-Byte-Minimalreport liefern.
+        if len(report) >= 10 and report[0] == 0x01:
+            return self._decode_minimal_state(report)
+
+        return None
+
+    def _enable_full_bluetooth_reports(self) -> None:
+        if self._device is None:
+            raise RuntimeError("Controller ist nicht verbunden.")
+
+        report = bytearray(BLUETOOTH_REPORT_SIZE)
+
+        report[0] = BLUETOOTH_OUTPUT_REPORT_ID
+
+        # HID-Ausgabe aktiv, CRC aktiv, Abfrageintervall 4 ms.
+        report[1] = 0xC4
+        report[2] = 0x00
+
+        crc_data = bytes([BLUETOOTH_OUTPUT_CRC_SEED]) + bytes(report[:-4])
+
+        crc = zlib.crc32(crc_data) & 0xFFFFFFFF
+
+        report[-4:] = crc.to_bytes(
+            length=4,
+            byteorder="little",
         )
 
-    def _decode_buttons(self, report: list[int]) -> set[Button]:
+        try:
+            written = self._device.write(list(report))
+        except OSError as error:
+            self.close()
+
+            raise RuntimeError(
+                "Der Bluetooth-Vollmodus konnte nicht aktiviert werden."
+            ) from error
+
+        if written <= 0:
+            self.close()
+
+            raise RuntimeError(
+                "Der Controller hat den Bluetooth-Output-Report nicht angenommen."
+            )
+
+    def _decode_bluetooth_state(
+        self,
+        report: list[int],
+    ) -> ControllerState:
+        # Im Bluetooth-Report beginnen die gemeinsamen Controllerdaten
+        # nach Report-ID und Bluetooth-Header bei Byte 3.
+        data_offset = 2
+
+        return ControllerState(
+            buttons=frozenset(
+                self._decode_buttons(
+                    report=report,
+                    data_offset=data_offset,
+                )
+            ),
+            axes=self._decode_axes(
+                report=report,
+                data_offset=data_offset,
+            ),
+            touches=self._decode_touches(report),
+        )
+
+    def _decode_minimal_state(
+        self,
+        report: list[int],
+    ) -> ControllerState:
+        return ControllerState(
+            buttons=frozenset(
+                self._decode_buttons(
+                    report=report,
+                    data_offset=0,
+                )
+            ),
+            axes=self._decode_axes(
+                report=report,
+                data_offset=0,
+            ),
+            touches={},
+        )
+
+    def _decode_buttons(
+        self,
+        report: list[int],
+        data_offset: int,
+    ) -> set[Button]:
         buttons: set[Button] = set()
 
-        buttons_1 = report[5]
-        buttons_2 = report[6]
-        buttons_3 = report[7]
+        buttons_1 = report[5 + data_offset]
+        buttons_2 = report[6 + data_offset]
+        buttons_3 = report[7 + data_offset]
 
         dpad_value = buttons_1 & 0x0F
         face_bits = buttons_1 & 0xF0
@@ -135,23 +233,86 @@ class DualShock4:
 
         return buttons
 
-    def _decode_axes(self, report: list[int]) -> dict[Axis, float]:
+    def _decode_axes(
+        self,
+        report: list[int],
+        data_offset: int,
+    ) -> dict[Axis, float]:
         return {
-            Axis.LEFT_X: self._normalize_stick(report[1]),
-            Axis.LEFT_Y: self._normalize_stick(report[2]),
-            Axis.RIGHT_X: self._normalize_stick(report[3]),
-            Axis.RIGHT_Y: self._normalize_stick(report[4]),
-            Axis.L2: round(report[8] / 255, 3),
-            Axis.R2: round(report[9] / 255, 3),
+            Axis.LEFT_X: self._normalize_stick(report[1 + data_offset]),
+            Axis.LEFT_Y: self._normalize_stick(report[2 + data_offset]),
+            Axis.RIGHT_X: self._normalize_stick(report[3 + data_offset]),
+            Axis.RIGHT_Y: self._normalize_stick(report[4 + data_offset]),
+            Axis.L2: round(
+                report[8 + data_offset] / 255,
+                3,
+            ),
+            Axis.R2: round(
+                report[9 + data_offset] / 255,
+                3,
+            ),
         }
 
-    def _normalize_stick(self, raw_value: int) -> float:
+    def _decode_touches(
+        self,
+        report: list[int],
+    ) -> dict[int, TouchPoint]:
+        touch_report_count = min(report[35], 4)
+
+        if touch_report_count == 0:
+            return {}
+
+        # Ein Bluetooth-Report kann mehrere ältere Touchmessungen
+        # enthalten. Für den aktuellen ControllerState brauchen wir
+        # ausschließlich den neuesten Block.
+        newest_block_index = touch_report_count - 1
+        block_start = 36 + newest_block_index * 9
+
+        touches: dict[int, TouchPoint] = {}
+
+        for finger_index in range(2):
+            point_index = block_start + 1 + finger_index * 4
+
+            contact = report[point_index]
+
+            active = (contact & 0x80) == 0
+
+            if not active:
+                continue
+
+            finger_id = contact & 0x7F
+
+            x_low = report[point_index + 1]
+            xy_high = report[point_index + 2]
+            y_high = report[point_index + 3]
+
+            x = x_low | ((xy_high & 0x0F) << 8)
+            y = ((xy_high & 0xF0) >> 4) | (y_high << 4)
+
+            touches[finger_id] = TouchPoint(
+                finger_id=finger_id,
+                x=x,
+                y=y,
+            )
+
+        return touches
+
+    def _normalize_stick(
+        self,
+        raw_value: int,
+    ) -> float:
         difference = raw_value - STICK_CENTER
 
         if abs(difference) <= STICK_DEADZONE:
             return 0.0
 
         if difference < 0:
-            return round(difference / STICK_CENTER, 3)
+            return round(
+                difference / STICK_CENTER,
+                3,
+            )
 
-        return round(difference / 127, 3)
+        return round(
+            difference / 127,
+            3,
+        )

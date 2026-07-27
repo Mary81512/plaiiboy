@@ -13,6 +13,8 @@ class EventType(Enum):
     AXIS_NEGATIVE_TRIGGERED = "axis_negative_triggered"
     AXIS_POSITIVE_TRIGGERED = "axis_positive_triggered"
 
+    TOUCHPAD_SWIPE = "touchpad_swipe"
+
 
 class Button(Enum):
     SQUARE = "SQUARE"
@@ -51,8 +53,15 @@ class Axis(Enum):
     R2 = "R2"
 
 
+class TouchGesture(Enum):
+    SWIPE_LEFT = "SWIPE_LEFT"
+    SWIPE_RIGHT = "SWIPE_RIGHT"
+    SWIPE_UP = "SWIPE_UP"
+    SWIPE_DOWN = "SWIPE_DOWN"
+
+
 @dataclass(frozen=True)
 class ControllerEvent:
     event_type: EventType
-    control: Button | Axis
+    control: Button | Axis | TouchGesture
     value: float
