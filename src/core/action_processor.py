@@ -1,5 +1,12 @@
+from collections.abc import Callable
+
 from core.actions import Action, ActionEvent
 from core.performance_state import Deck, PerformanceState
+
+ActionHandler = Callable[
+    [ActionEvent],
+    list[ActionEvent],
+]
 
 
 class ActionProcessor:
@@ -9,6 +16,16 @@ class ActionProcessor:
     ) -> None:
         self._state = state if state is not None else PerformanceState()
 
+        self._handlers: dict[
+            Action,
+            ActionHandler,
+        ] = {
+            Action.TOGGLE_ACTIVE_DECK: (self._toggle_active_deck),
+            Action.CYCLE_SEEK_SPEED: (self._cycle_seek_speed),
+            Action.ACTIVE_DECK_SEEK_BACKWARD: (self._seek_backward),
+            Action.ACTIVE_DECK_SEEK_FORWARD: (self._seek_forward),
+        }
+
     @property
     def state(self) -> PerformanceState:
         return self._state
@@ -17,11 +34,10 @@ class ActionProcessor:
         self,
         event: ActionEvent,
     ) -> list[ActionEvent]:
-        if event.action is Action.TOGGLE_ACTIVE_DECK:
-            return self._toggle_active_deck(event)
+        handler = self._handlers.get(event.action)
 
-        if event.action is Action.CYCLE_SEEK_SPEED:
-            return self._cycle_seek_speed(event)
+        if handler is not None:
+            return handler(event)
 
         resolved_action = self._resolve_active_deck_action(event.action)
 
@@ -29,10 +45,9 @@ class ActionProcessor:
             return [event]
 
         return [
-            ActionEvent(
+            self._replace_action(
+                event=event,
                 action=resolved_action,
-                value=event.value,
-                source_event=event.source_event,
             )
         ]
 
@@ -42,10 +57,11 @@ class ActionProcessor:
     ) -> list[ActionEvent]:
         active_deck = self._state.toggle_active_deck()
 
-        if active_deck is Deck.DECK_1:
-            feedback_action = Action.FEEDBACK_ACTIVE_DECK_1
-        else:
-            feedback_action = Action.FEEDBACK_ACTIVE_DECK_2
+        feedback_action = (
+            Action.FEEDBACK_ACTIVE_DECK_1
+            if active_deck is Deck.DECK_1
+            else Action.FEEDBACK_ACTIVE_DECK_2
+        )
 
         return [
             ActionEvent(
@@ -69,21 +85,81 @@ class ActionProcessor:
             )
         ]
 
+    def _seek_backward(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        action = (
+            Action.DECK_1_SEEK_BACKWARD
+            if self._state.active_deck is Deck.DECK_1
+            else Action.DECK_2_SEEK_BACKWARD
+        )
+
+        return self._create_seek_pulses(
+            event=event,
+            action=action,
+        )
+
+    def _seek_forward(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        action = (
+            Action.DECK_1_SEEK_FORWARD
+            if self._state.active_deck is Deck.DECK_1
+            else Action.DECK_2_SEEK_FORWARD
+        )
+
+        return self._create_seek_pulses(
+            event=event,
+            action=action,
+        )
+
+    def _create_seek_pulses(
+        self,
+        event: ActionEvent,
+        action: Action,
+    ) -> list[ActionEvent]:
+        pulse_count = max(
+            1,
+            round(event.value * self._state.seek_speed),
+        )
+
+        return [
+            ActionEvent(
+                action=action,
+                value=1.0,
+                source_event=event.source_event,
+            )
+            for _ in range(pulse_count)
+        ]
+
     def _resolve_active_deck_action(
         self,
         action: Action,
     ) -> Action | None:
         if self._state.active_deck is Deck.DECK_1:
-            deck_mappings = {
-                Action.ACTIVE_DECK_HOTCUE_PREVIOUS: Action.DECK_1_HOTCUE_PREVIOUS,
-                Action.ACTIVE_DECK_HOTCUE_NEXT: Action.DECK_1_HOTCUE_NEXT,
-                Action.ACTIVE_DECK_HOTCUE_TOGGLE: Action.DECK_1_HOTCUE_TOGGLE,
+            mappings = {
+                Action.ACTIVE_DECK_HOTCUE_PREVIOUS: (Action.DECK_1_HOTCUE_PREVIOUS),
+                Action.ACTIVE_DECK_HOTCUE_NEXT: (Action.DECK_1_HOTCUE_NEXT),
+                Action.ACTIVE_DECK_HOTCUE_TOGGLE: (Action.DECK_1_HOTCUE_TOGGLE),
             }
         else:
-            deck_mappings = {
-                Action.ACTIVE_DECK_HOTCUE_PREVIOUS: Action.DECK_2_HOTCUE_PREVIOUS,
-                Action.ACTIVE_DECK_HOTCUE_NEXT: Action.DECK_2_HOTCUE_NEXT,
-                Action.ACTIVE_DECK_HOTCUE_TOGGLE: Action.DECK_2_HOTCUE_TOGGLE,
+            mappings = {
+                Action.ACTIVE_DECK_HOTCUE_PREVIOUS: (Action.DECK_2_HOTCUE_PREVIOUS),
+                Action.ACTIVE_DECK_HOTCUE_NEXT: (Action.DECK_2_HOTCUE_NEXT),
+                Action.ACTIVE_DECK_HOTCUE_TOGGLE: (Action.DECK_2_HOTCUE_TOGGLE),
             }
 
-        return deck_mappings.get(action)
+        return mappings.get(action)
+
+    def _replace_action(
+        self,
+        event: ActionEvent,
+        action: Action,
+    ) -> ActionEvent:
+        return ActionEvent(
+            action=action,
+            value=event.value,
+            source_event=event.source_event,
+        )

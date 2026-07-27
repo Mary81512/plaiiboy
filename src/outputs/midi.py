@@ -68,6 +68,11 @@ MIDI_MAPPINGS: dict[Action, MidiMapping] = {
     Action.BROWSER_DOWN: MidiNoteMapping(note=61),
     Action.BROWSER_LEVEL_UP: MidiNoteMapping(note=62),
     Action.BROWSER_LEVEL_DOWN: MidiNoteMapping(note=63),
+    # Touchpad-Seeking
+    Action.DECK_1_SEEK_BACKWARD: MidiNoteMapping(note=64),
+    Action.DECK_1_SEEK_FORWARD: MidiNoteMapping(note=65),
+    Action.DECK_2_SEEK_BACKWARD: MidiNoteMapping(note=66),
+    Action.DECK_2_SEEK_FORWARD: MidiNoteMapping(note=67),
     # Touchpad-Suchgeschwindigkeit
     Action.CYCLE_SEEK_SPEED: MidiNoteMapping(note=68),
 }

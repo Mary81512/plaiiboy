@@ -3,19 +3,24 @@ import zlib
 
 import hid
 
+from config import (
+    BLUETOOTH_HARDWARE_CONTROL,
+    BLUETOOTH_INPUT_REPORT_ID,
+    BLUETOOTH_OUTPUT_CRC_SEED,
+    BLUETOOTH_OUTPUT_REPORT_ID,
+    BLUETOOTH_REPORT_SIZE,
+    DUALSHOCK_4_PRODUCT_ID,
+    SONY_VENDOR_ID,
+    STICK_CENTER,
+    STICK_DEADZONE,
+    STICK_NEGATIVE_RANGE,
+    STICK_POSITIVE_RANGE,
+)
 from controller.state import ControllerState, TouchPoint
 from core.events import Axis, Button
-
-SONY_VENDOR_ID = 0x054C
-DUALSHOCK_4_PRODUCT_ID = 0x05C4
-
-BLUETOOTH_INPUT_REPORT_ID = 0x11
-BLUETOOTH_OUTPUT_REPORT_ID = 0x11
-BLUETOOTH_REPORT_SIZE = 78
-BLUETOOTH_OUTPUT_CRC_SEED = 0xA2
-
-STICK_CENTER = 128
-STICK_DEADZONE = 15
+)
+from controller.state import ControllerState, TouchPoint
+from core.events import Axis, Button
 
 
 class DualShock4:
@@ -101,7 +106,7 @@ class DualShock4:
         report[0] = BLUETOOTH_OUTPUT_REPORT_ID
 
         # HID-Ausgabe aktiv, CRC aktiv, Abfrageintervall 4 ms.
-        report[1] = 0xC4
+        report[1] = BLUETOOTH_HARDWARE_CONTROL
         report[2] = 0x00
 
         crc_data = bytes([BLUETOOTH_OUTPUT_CRC_SEED]) + bytes(report[:-4])
@@ -308,11 +313,11 @@ class DualShock4:
 
         if difference < 0:
             return round(
-                difference / STICK_CENTER,
+                difference / STICK_NEGATIVE_RANGE,
                 3,
             )
 
         return round(
-            difference / 127,
+            difference / STICK_POSITIVE_RANGE,
             3,
         )
