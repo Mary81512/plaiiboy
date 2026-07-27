@@ -4,10 +4,14 @@ from enum import Enum
 
 class EventType(Enum):
     BUTTON_PRESSED = "button_pressed"
+    BUTTON_SHORT_PRESSED = "button_short_pressed"
     BUTTON_RELEASED = "button_released"
     BUTTON_HELD = "button_held"
     BUTTON_DOUBLE_PRESSED = "button_double_pressed"
+
     AXIS_CHANGED = "axis_changed"
+    AXIS_NEGATIVE_TRIGGERED = "axis_negative_triggered"
+    AXIS_POSITIVE_TRIGGERED = "axis_positive_triggered"
 
 
 class Button(Enum):

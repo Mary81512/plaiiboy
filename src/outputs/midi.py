@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum
 
 import mido
 
@@ -7,11 +8,17 @@ from core.events import EventType
 from outputs.base import Output
 
 
+class MidiNoteMode(Enum):
+    PULSE = "pulse"
+    GATE = "gate"
+
+
 @dataclass(frozen=True)
 class MidiNoteMapping:
     note: int
     channel: int = 0
     velocity: int = 127
+    mode: MidiNoteMode = MidiNoteMode.PULSE
 
 
 @dataclass(frozen=True)
@@ -23,26 +30,46 @@ class MidiControlChangeMapping:
 
 MidiMapping = MidiNoteMapping | MidiControlChangeMapping
 
-
-TEST_MIDI_MAPPINGS: dict[Action, MidiMapping] = {
-    Action.PLAY_PAUSE: MidiNoteMapping(note=36),
-    Action.CUE: MidiNoteMapping(note=37),
-    Action.SYNC: MidiNoteMapping(note=38),
-    Action.LOAD_TRACK: MidiNoteMapping(note=39),
-    Action.LEFT_STICK_X: MidiControlChangeMapping(
-        control=20,
-        bipolar=True,
+MIDI_MAPPINGS: dict[Action, MidiMapping] = {
+    # Deck 1
+    Action.DECK_1_PLAY_TOGGLE: MidiNoteMapping(note=36),
+    Action.DECK_1_CUE: MidiNoteMapping(
+        note=37,
+        mode=MidiNoteMode.GATE,
     ),
-    Action.LEFT_STICK_Y: MidiControlChangeMapping(
-        control=21,
-        bipolar=True,
+    Action.DECK_1_SYNC: MidiNoteMapping(note=38),
+    Action.DECK_1_LOAD_TRACK: MidiNoteMapping(note=39),
+    Action.DECK_1_LOOP_SIZE_DECREASE: MidiNoteMapping(note=40),
+    Action.DECK_1_LOOP_SIZE_INCREASE: MidiNoteMapping(note=41),
+    Action.DECK_1_LOOP_TOGGLE: MidiNoteMapping(note=42),
+    Action.DECK_1_BPM_INCREASE: MidiNoteMapping(note=43),
+    Action.DECK_1_BPM_DECREASE: MidiNoteMapping(note=44),
+    Action.DECK_1_HOTCUE_PREVIOUS: MidiNoteMapping(note=45),
+    Action.DECK_1_HOTCUE_NEXT: MidiNoteMapping(note=46),
+    Action.DECK_1_HOTCUE_TOGGLE: MidiNoteMapping(note=47),
+    # Deck 2
+    Action.DECK_2_PLAY_TOGGLE: MidiNoteMapping(note=48),
+    Action.DECK_2_CUE: MidiNoteMapping(
+        note=49,
+        mode=MidiNoteMode.GATE,
     ),
-    Action.LEFT_TRIGGER: MidiControlChangeMapping(
-        control=22,
-    ),
-    Action.RIGHT_TRIGGER: MidiControlChangeMapping(
-        control=23,
-    ),
+    Action.DECK_2_SYNC: MidiNoteMapping(note=50),
+    Action.DECK_2_LOAD_TRACK: MidiNoteMapping(note=51),
+    Action.DECK_2_LOOP_SIZE_DECREASE: MidiNoteMapping(note=52),
+    Action.DECK_2_LOOP_SIZE_INCREASE: MidiNoteMapping(note=53),
+    Action.DECK_2_LOOP_TOGGLE: MidiNoteMapping(note=54),
+    Action.DECK_2_BPM_INCREASE: MidiNoteMapping(note=55),
+    Action.DECK_2_BPM_DECREASE: MidiNoteMapping(note=56),
+    Action.DECK_2_HOTCUE_PREVIOUS: MidiNoteMapping(note=57),
+    Action.DECK_2_HOTCUE_NEXT: MidiNoteMapping(note=58),
+    Action.DECK_2_HOTCUE_TOGGLE: MidiNoteMapping(note=59),
+    # Browser
+    Action.BROWSER_UP: MidiNoteMapping(note=60),
+    Action.BROWSER_DOWN: MidiNoteMapping(note=61),
+    Action.BROWSER_LEVEL_UP: MidiNoteMapping(note=62),
+    Action.BROWSER_LEVEL_DOWN: MidiNoteMapping(note=63),
+    # Touchpad-Suchgeschwindigkeit
+    Action.CYCLE_SEEK_SPEED: MidiNoteMapping(note=68),
 }
 
 
@@ -54,8 +81,9 @@ class MidiOutput(Output):
     ) -> None:
         self._port_name = port_name
         self._mappings = (
-            mappings.copy() if mappings is not None else TEST_MIDI_MAPPINGS.copy()
+            mappings.copy() if mappings is not None else MIDI_MAPPINGS.copy()
         )
+
         self._port: mido.ports.BaseOutput | None = None
 
     @property
@@ -84,10 +112,20 @@ class MidiOutput(Output):
             self._send_note(event, mapping)
             return
 
-        if isinstance(mapping, MidiControlChangeMapping):
-            self._send_control_change(event, mapping)
+        self._send_control_change(event, mapping)
 
     def _send_note(
+        self,
+        event: ActionEvent,
+        mapping: MidiNoteMapping,
+    ) -> None:
+        if mapping.mode is MidiNoteMode.GATE:
+            self._send_gate_note(event, mapping)
+            return
+
+        self._send_pulse_note(mapping)
+
+    def _send_gate_note(
         self,
         event: ActionEvent,
         mapping: MidiNoteMapping,
@@ -95,25 +133,52 @@ class MidiOutput(Output):
         if self._port is None:
             return
 
-        if event.source_event.event_type is EventType.BUTTON_PRESSED:
-            message_type = "note_on"
-            velocity = mapping.velocity
+        event_type = event.source_event.event_type
 
-        elif event.source_event.event_type is EventType.BUTTON_RELEASED:
-            message_type = "note_off"
-            velocity = 0
+        if event_type is EventType.BUTTON_PRESSED:
+            message = mido.Message(  # type: ignore[attr-defined]
+                "note_on",
+                note=mapping.note,
+                velocity=mapping.velocity,
+                channel=mapping.channel,
+            )
+
+        elif event_type is EventType.BUTTON_RELEASED:
+            message = mido.Message(  # type: ignore[attr-defined]
+                "note_off",
+                note=mapping.note,
+                velocity=0,
+                channel=mapping.channel,
+            )
 
         else:
             return
 
-        message = mido.Message(  # type: ignore[attr-defined]
-            message_type,
+        self._port.send(message)
+
+    def _send_pulse_note(
+        self,
+        mapping: MidiNoteMapping,
+    ) -> None:
+        if self._port is None:
+            return
+
+        note_on = mido.Message(  # type: ignore[attr-defined]
+            "note_on",
             note=mapping.note,
-            velocity=velocity,
+            velocity=mapping.velocity,
             channel=mapping.channel,
         )
 
-        self._port.send(message)
+        note_off = mido.Message(  # type: ignore[attr-defined]
+            "note_off",
+            note=mapping.note,
+            velocity=0,
+            channel=mapping.channel,
+        )
+
+        self._port.send(note_on)
+        self._port.send(note_off)
 
     def _send_control_change(
         self,
