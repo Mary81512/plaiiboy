@@ -125,11 +125,11 @@ export class Controller3D {
       return;
     }
 
-    target.copy(originalPosition);
+    target.position.copy(originalPosition);
 
-    target.x += offset.x ?? 0;
-    target.y += offset.y ?? 0;
-    target.z += offset.z ?? 0;
+    target.position.x += offset.x ?? 0;
+    target.position.y += offset.y ?? 0;
+    target.position.z += offset.z ?? 0;
   }
 
   setRotationOffset(name, offset = {}) {
@@ -220,22 +220,19 @@ export class Controller3D {
       part.rotation.y += (target.rotation.y - part.rotation.y) * speed;
 
       part.rotation.z += (target.rotation.z - part.rotation.z) * speed;
+    }
 
-      if (this.controller) {
-        const speed = this.controllerRotationSpeed;
+    if (this.controller) {
+      const speed = this.controllerRotationSpeed;
 
-        this.controller.rotation.x +=
-          (this.controllerTargetRotation.x - this.controller.rotation.x) *
-          speed;
+      this.controller.rotation.x +=
+        (this.controllerTargetRotation.x - this.controller.rotation.x) * speed;
 
-        this.controller.rotation.y +=
-          (this.controllerTargetRotation.y - this.controller.rotation.y) *
-          speed;
+      this.controller.rotation.y +=
+        (this.controllerTargetRotation.y - this.controller.rotation.y) * speed;
 
-        this.controller.rotation.z +=
-          (this.controllerTargetRotation.z - this.controller.rotation.z) *
-          speed;
-      }
+      this.controller.rotation.z +=
+        (this.controllerTargetRotation.z - this.controller.rotation.z) * speed;
     }
   }
 
