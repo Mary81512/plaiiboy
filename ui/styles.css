@@ -531,3 +531,8 @@ button[data-control].is-active {
     grid-template-columns: 1fr;
   }
 }
+
+#controller3d {
+  width: 100%;
+  height: 500px;
+}

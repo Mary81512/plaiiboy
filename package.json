@@ -1,0 +1,28 @@
+{
+  "dependencies": {
+    "three": "^0.185.1"
+  },
+  "name": "plaiiboy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mary81512/plaiiboy.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Mary81512/plaiiboy/issues"
+  },
+  "homepage": "https://github.com/Mary81512/plaiiboy#readme"
+}
