@@ -24,9 +24,141 @@
 
       <section class="dashboard">
         <article class="controller-preview">
-          <div class="preview-placeholder">
-            <span>3D Controller</span>
-            <small>folgt später</small>
+          <div class="controller-stage">
+            <div class="controller" id="controller-visual">
+              <div class="shoulder shoulder-left">
+                <div class="shoulder-button" data-control="L1">L1</div>
+                <div class="trigger-button" data-control="L2">L2</div>
+              </div>
+
+              <div class="shoulder shoulder-right">
+                <div class="shoulder-button" data-control="R1">R1</div>
+                <div class="trigger-button" data-control="R2">R2</div>
+              </div>
+
+              <div class="controller-body">
+                <div class="lightbar" id="controller-lightbar"></div>
+
+                <button
+                  class="small-button share-button"
+                  type="button"
+                  data-control="SHARE"
+                >
+                  SHARE
+                </button>
+
+                <button
+                  class="small-button options-button"
+                  type="button"
+                  data-control="OPTIONS"
+                >
+                  OPTIONS
+                </button>
+
+                <button
+                  class="touchpad"
+                  type="button"
+                  data-control="TOUCHPAD_CLICK"
+                >
+                  <span>TOUCHPAD</span>
+                  <small id="touchpad-feedback">Swipe / Click</small>
+                </button>
+
+                <div class="dpad">
+                  <button
+                    class="dpad-button dpad-up"
+                    type="button"
+                    data-control="DPAD_UP"
+                  >
+                    ▲
+                  </button>
+
+                  <button
+                    class="dpad-button dpad-left"
+                    type="button"
+                    data-control="DPAD_LEFT"
+                  >
+                    ◀
+                  </button>
+
+                  <div class="dpad-center"></div>
+
+                  <button
+                    class="dpad-button dpad-right"
+                    type="button"
+                    data-control="DPAD_RIGHT"
+                  >
+                    ▶
+                  </button>
+
+                  <button
+                    class="dpad-button dpad-down"
+                    type="button"
+                    data-control="DPAD_DOWN"
+                  >
+                    ▼
+                  </button>
+                </div>
+
+                <div class="face-buttons">
+                  <button
+                    class="face-button triangle"
+                    type="button"
+                    data-control="TRIANGLE"
+                  >
+                    △
+                  </button>
+
+                  <button
+                    class="face-button square"
+                    type="button"
+                    data-control="SQUARE"
+                  >
+                    □
+                  </button>
+
+                  <button
+                    class="face-button circle"
+                    type="button"
+                    data-control="CIRCLE"
+                  >
+                    ○
+                  </button>
+
+                  <button
+                    class="face-button cross"
+                    type="button"
+                    data-control="CROSS"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <button
+                  class="stick stick-left"
+                  type="button"
+                  data-control="L3"
+                >
+                  <span></span>
+                </button>
+
+                <button
+                  class="stick stick-right"
+                  type="button"
+                  data-control="R3"
+                >
+                  <span></span>
+                </button>
+
+                <button class="ps-button" type="button" data-control="PS">
+                  PS
+                </button>
+              </div>
+            </div>
+
+            <p class="controller-hint">
+              Controller-Eingaben werden hier live angezeigt
+            </p>
           </div>
         </article>
 

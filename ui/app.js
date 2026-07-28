@@ -146,8 +146,96 @@ function formatAction(action) {
   return actionLabels[action] ?? makeReadableFallback(action);
 }
 
+const activeControls = new Map();
+
+function findControlElements(control) {
+  return document.querySelectorAll(`[data-control="${control}"]`);
+}
+
+function setControlActive(control, active) {
+  const elements = findControlElements(control);
+
+  elements.forEach((element) => {
+    element.classList.toggle("is-active", active);
+  });
+}
+
+function pulseControl(control, duration = 180) {
+  setControlActive(control, true);
+
+  const existingTimer = activeControls.get(control);
+
+  if (existingTimer !== undefined) {
+    clearTimeout(existingTimer);
+  }
+
+  const timer = setTimeout(() => {
+    setControlActive(control, false);
+    activeControls.delete(control);
+  }, duration);
+
+  activeControls.set(control, timer);
+}
+
+function showTouchpadFeedback(control) {
+  const feedback = document.getElementById("touchpad-feedback");
+
+  if (!feedback) {
+    return;
+  }
+
+  const labels = {
+    TOUCHPAD_CLICK: "Click",
+    TOUCHPAD_SWIPE_LEFT: "Swipe ←",
+    TOUCHPAD_SWIPE_RIGHT: "Swipe →",
+    TOUCHPAD_SWIPE_UP: "Swipe ↑",
+    TOUCHPAD_SWIPE_DOWN: "Swipe ↓",
+  };
+
+  feedback.textContent = labels[control] ?? "Touchpad";
+}
+
+function handleControllerEvent(event) {
+  if (!event || !event.control) {
+    return;
+  }
+
+  const control = event.control;
+  const eventType = String(event.eventType ?? "");
+  const value = Number(event.value ?? 0);
+
+  if (control.startsWith("TOUCHPAD_")) {
+    showTouchpadFeedback(control);
+  }
+
+  const isPressed =
+    eventType.includes("PRESSED") || eventType.includes("HELD") || value > 0.5;
+
+  const isReleased = eventType.includes("RELEASED") || eventType.includes("UP");
+
+  if (isReleased) {
+    setControlActive(control, false);
+    return;
+  }
+
+  if (isPressed) {
+    setControlActive(control, true);
+    return;
+  }
+
+  /*
+   * Manche Events wie Swipe oder Double Press haben kein separates
+   * Release-Event. Diese werden deshalb kurz sichtbar aufgeblendet.
+   */
+  pulseControl(control);
+}
+
 window.plaiiboy = {
   updateStatus(status) {
+    if (status.controllerEvent !== undefined) {
+      handleControllerEvent(status.controllerEvent);
+    }
+
     if (status.controller !== undefined) {
       setText("controller-status", status.controller);
     }

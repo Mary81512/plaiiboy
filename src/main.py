@@ -89,8 +89,19 @@ def run_core(
                 )
 
                 if interface_output is not None:
+                    event_type_name = getattr(
+                        controller_event.event_type,
+                        "name",
+                        str(controller_event.event_type),
+                    )
+
                     interface_output.update_status(
                         lastInput=control_name,
+                        controllerEvent={
+                            "control": control_name,
+                            "eventType": event_type_name,
+                            "value": controller_event.value,
+                        },
                     )
 
                 print(
