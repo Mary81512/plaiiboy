@@ -9,6 +9,7 @@ export class Controller3D {
     this.controller = null;
     this.parts = {};
     this.originalPositions = {};
+    this.targets = {};
   }
 
   load() {
@@ -55,6 +56,7 @@ export class Controller3D {
 
           this.parts[name] = part;
           this.originalPositions[name] = part.position.clone();
+          this.targets[name] = part.position.clone();
         });
 
         console.log("Gefundene Controller-Teile:", this.parts);
@@ -104,10 +106,12 @@ export class Controller3D {
       return;
     }
 
-    part.position.copy(originalPosition);
+    const target = this.targets[name];
+
+    target.copy(originalPosition);
 
     if (pressed) {
-      part.position.z -= 0.15;
+      target.z -= 0.2;
     }
   }
 
@@ -145,5 +149,15 @@ export class Controller3D {
     console.log("Bewege Teil:", partName, this.parts[partName]);
 
     this.setButtonPressed(partName, active);
+  }
+  update() {
+    for (const name in this.parts) {
+      const part = this.parts[name];
+      const target = this.targets[name];
+
+      if (!part || !target) continue;
+
+      part.position.lerp(target, 0.25);
+    }
   }
 }

@@ -51,6 +51,8 @@ export class Scene3D {
   animate() {
     requestAnimationFrame(() => this.animate());
 
+    this.controller.update();
+
     this.renderer.render(this.scene, this.camera);
   }
 }
