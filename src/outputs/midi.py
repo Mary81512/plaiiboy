@@ -64,16 +64,14 @@ MIDI_MAPPINGS: dict[Action, MidiMapping] = {
     Action.DECK_2_HOTCUE_PREVIOUS: MidiNoteMapping(note=57),
     Action.DECK_2_HOTCUE_NEXT: MidiNoteMapping(note=58),
     Action.DECK_2_HOTCUE_TOGGLE: MidiNoteMapping(note=59),
-    # Browser
     # Browser Tree
     Action.BROWSER_TREE_UP: MidiNoteMapping(note=60),
     Action.BROWSER_TREE_DOWN: MidiNoteMapping(note=61),
+    Action.BROWSER_TREE_COLLAPSE: MidiNoteMapping(note=62),
+    Action.BROWSER_TREE_EXPAND: MidiNoteMapping(note=63),
     # Browser List
-    Action.BROWSER_LIST_UP: MidiNoteMapping(note=60),
-    Action.BROWSER_LIST_DOWN: MidiNoteMapping(note=61),
-    # Browser Ebenen
-    Action.BROWSER_LEVEL_UP: MidiNoteMapping(note=62),
-    Action.BROWSER_LEVEL_DOWN: MidiNoteMapping(note=63),
+    Action.BROWSER_LIST_UP: MidiNoteMapping(note=68),
+    Action.BROWSER_LIST_DOWN: MidiNoteMapping(note=69),
     # Touchpad-Seeking
     Action.DECK_1_SEEK_BACKWARD: MidiNoteMapping(note=64),
     Action.DECK_1_SEEK_FORWARD: MidiNoteMapping(note=65),

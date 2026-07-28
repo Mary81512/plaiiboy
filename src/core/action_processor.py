@@ -99,7 +99,12 @@ class ActionProcessor:
             else Action.BROWSER_LIST_UP
         )
 
-        return [self._replace_action(event, action)]
+        return [
+            self._replace_action(
+                event=event,
+                action=action,
+            )
+        ]
 
     def _browser_down(
         self,
@@ -111,21 +116,43 @@ class ActionProcessor:
             else Action.BROWSER_LIST_DOWN
         )
 
-        return [self._replace_action(event, action)]
+        return [
+            self._replace_action(
+                event=event,
+                action=action,
+            )
+        ]
 
     def _browser_level_down(
         self,
         event: ActionEvent,
     ) -> list[ActionEvent]:
+        if self._state.browser_focus is BrowserFocus.LIST:
+            return []
+
         self._state.set_browser_focus(BrowserFocus.LIST)
-        return [event]
+
+        return [
+            self._replace_action(
+                event=event,
+                action=Action.BROWSER_TREE_EXPAND,
+            )
+        ]
 
     def _browser_level_up(
         self,
         event: ActionEvent,
     ) -> list[ActionEvent]:
-        self._state.set_browser_focus(BrowserFocus.TREE)
-        return [event]
+        if self._state.browser_focus is BrowserFocus.LIST:
+            self._state.set_browser_focus(BrowserFocus.TREE)
+            return []
+
+        return [
+            self._replace_action(
+                event=event,
+                action=Action.BROWSER_TREE_COLLAPSE,
+            )
+        ]
 
     def _seek_backward(
         self,
