@@ -173,6 +173,8 @@ class DualShock4:
             if wave_index < wave_count - 1:
                 time.sleep(0.35)
 
+
+
     def _write_output_report(self) -> None:
         if self._device is None:
             raise RuntimeError("Controller ist nicht verbunden.")
@@ -252,6 +254,10 @@ class DualShock4:
                 data_offset=data_offset,
             ),
             touches=self._decode_touches(report),
+            motion=self._decode_motion(
+                report=report,
+                data_offset=data_offset,
+            ),
         )
 
     def _decode_minimal_state(
@@ -355,6 +361,48 @@ class DualShock4:
                 3,
             ),
         }
+        def _decode_motion(
+        self,
+        report: list[int],
+        data_offset: int,
+    ) -> MotionState:
+        return MotionState(
+            gyro_x=self._decode_signed_16(
+                report,
+                13 + data_offset,
+            ),
+            gyro_y=self._decode_signed_16(
+                report,
+                15 + data_offset,
+            ),
+            gyro_z=self._decode_signed_16(
+                report,
+                17 + data_offset,
+            ),
+            accel_x=self._decode_signed_16(
+                report,
+                19 + data_offset,
+            ),
+            accel_y=self._decode_signed_16(
+                report,
+                21 + data_offset,
+            ),
+            accel_z=self._decode_signed_16(
+                report,
+                23 + data_offset,
+            ),
+        )
+
+    def _decode_signed_16(
+        self,
+        report: list[int],
+        index: int,
+    ) -> int:
+        return int.from_bytes(
+            bytes(report[index:index + 2]),
+            byteorder="little",
+            signed=True,
+        )
 
     def _decode_touches(
         self,
@@ -419,3 +467,5 @@ class DualShock4:
             difference / STICK_POSITIVE_RANGE,
             3,
         )
+
+
