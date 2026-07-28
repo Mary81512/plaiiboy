@@ -10,6 +10,7 @@ export class Controller3D {
     this.parts = {};
     this.originalPositions = {};
     this.targets = {};
+    this.animationSpeed = {};
   }
 
   load() {
@@ -57,6 +58,7 @@ export class Controller3D {
           this.parts[name] = part;
           this.originalPositions[name] = part.position.clone();
           this.targets[name] = part.position.clone();
+          this.animationSpeed[name] = 0.25;
         });
 
         console.log("Gefundene Controller-Teile:", this.parts);
@@ -98,7 +100,8 @@ export class Controller3D {
       },
     );
   }
-  setButtonPressed(name, pressed) {
+
+  setPositionOffset(name, offset = {}) {
     const originalPosition = this.originalPositions[name];
     const target = this.targets[name];
 
@@ -109,9 +112,15 @@ export class Controller3D {
 
     target.copy(originalPosition);
 
-    if (pressed) {
-      target.z -= 0.2;
-    }
+    target.x += offset.x ?? 0;
+    target.y += offset.y ?? 0;
+    target.z += offset.z ?? 0;
+  }
+
+  setButtonPressed(name, pressed) {
+    this.setPositionOffset(name, {
+      z: pressed ? -0.2 : 0,
+    });
   }
 
   setControlActive(control, active) {
@@ -149,6 +158,15 @@ export class Controller3D {
 
     this.setButtonPressed(partName, active);
   }
+
+  setAnimationSpeed(name, speed) {
+    if (this.animationSpeed[name] === undefined) {
+      return;
+    }
+
+    this.animationSpeed[name] = speed;
+  }
+
   update() {
     for (const name in this.parts) {
       const part = this.parts[name];
@@ -156,7 +174,7 @@ export class Controller3D {
 
       if (!part || !target) continue;
 
-      part.position.lerp(target, 0.25);
+      part.position.lerp(target, this.animationSpeed[name]);
     }
   }
 }
