@@ -150,24 +150,28 @@ class DualShock4:
             large_motor=0,
         )
 
-    def rumble_track_end_warning(
-        self,
-    ) -> None:
-        for pulse_index in range(3):
-            self.set_rumble(
-                small_motor=255,
-                large_motor=80,
-            )
+    def rumble_track_end_warning(self) -> None:
+        wave_count = 2
 
-            time.sleep(0.16)
+        for wave_index in range(wave_count):
+            for pulse_index in range(2):
+                self.set_rumble(
+                    small_motor=255,
+                    large_motor=80,
+                )
 
-            self.set_rumble(
-                small_motor=0,
-                large_motor=0,
-            )
+                time.sleep(0.16)
 
-            if pulse_index < 2:
-                time.sleep(0.18)
+                self.set_rumble(
+                    small_motor=0,
+                    large_motor=0,
+                )
+
+                if pulse_index < 2:
+                    time.sleep(0.18)
+
+            if wave_index < wave_count - 1:
+                time.sleep(0.35)
 
     def _write_output_report(self) -> None:
         if self._device is None:
