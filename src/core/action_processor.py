@@ -93,11 +93,11 @@ class ActionProcessor:
         self,
         event: ActionEvent,
     ) -> list[ActionEvent]:
-        action = (
-            Action.BROWSER_TREE_UP
-            if self._state.browser_focus is BrowserFocus.TREE
-            else Action.BROWSER_LIST_UP
-        )
+        if self._state.browser_focus is BrowserFocus.LIST:
+            action = Action.BROWSER_LIST_UP
+        else:
+            self._state.set_browser_focus(BrowserFocus.TREE)
+            action = Action.BROWSER_TREE_UP
 
         return [
             self._replace_action(
@@ -110,11 +110,11 @@ class ActionProcessor:
         self,
         event: ActionEvent,
     ) -> list[ActionEvent]:
-        action = (
-            Action.BROWSER_TREE_DOWN
-            if self._state.browser_focus is BrowserFocus.TREE
-            else Action.BROWSER_LIST_DOWN
-        )
+        if self._state.browser_focus is BrowserFocus.LIST:
+            action = Action.BROWSER_LIST_DOWN
+        else:
+            self._state.set_browser_focus(BrowserFocus.TREE)
+            action = Action.BROWSER_TREE_DOWN
 
         return [
             self._replace_action(
@@ -130,7 +130,11 @@ class ActionProcessor:
         if self._state.browser_focus is BrowserFocus.LIST:
             return []
 
-        self._state.set_browser_focus(BrowserFocus.LIST)
+        if self._state.browser_focus is BrowserFocus.TREE_EXPANDED:
+            self._state.set_browser_focus(BrowserFocus.LIST)
+            return []
+
+        self._state.set_browser_focus(BrowserFocus.TREE_EXPANDED)
 
         return [
             self._replace_action(
@@ -144,8 +148,10 @@ class ActionProcessor:
         event: ActionEvent,
     ) -> list[ActionEvent]:
         if self._state.browser_focus is BrowserFocus.LIST:
-            self._state.set_browser_focus(BrowserFocus.TREE)
+            self._state.set_browser_focus(BrowserFocus.TREE_EXPANDED)
             return []
+
+        self._state.set_browser_focus(BrowserFocus.TREE)
 
         return [
             self._replace_action(

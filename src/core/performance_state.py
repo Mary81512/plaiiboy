@@ -11,7 +11,8 @@ class Deck(Enum):
 
 class BrowserFocus(Enum):
     TREE = 1
-    LIST = 2
+    TREE_EXPANDED = 2
+    LIST = 3
 
 
 @dataclass
