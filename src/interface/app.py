@@ -39,6 +39,9 @@ def run_interface(
         min_size=(800, 560),
     )
 
+    if window is None:
+        raise RuntimeError("Fenster konnte nicht erstellt werden.")
+
     interface_output.attach_window(window)
 
     if core_target is not None:

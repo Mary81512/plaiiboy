@@ -44,7 +44,7 @@ class InterfaceOutput(Output):
 
         try:
             window.evaluate_js(f"window.plaiiboy.updateStatus({payload});")
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001
             print(f"[INTERFACE] Status konnte nicht übertragen werden: {error}")
 
     def handle(self, event: ActionEvent) -> None:

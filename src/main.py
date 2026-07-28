@@ -7,6 +7,7 @@ from core.layers import LayerManager
 from core.mapping import ActionMapper
 from inputs.traktor_feedback import TraktorFeedbackInput
 from outputs.debug import DebugOutput
+from outputs.interface import InterfaceOutput
 from outputs.midi import MidiOutput
 
 
@@ -25,7 +26,9 @@ def apply_layer_feedback(
     print(f"Aktiver Layer: {layers.active_layer.number}")
 
 
-def main() -> None:
+def run_core(
+    interface_output: InterfaceOutput | None = None,
+) -> None:
     inputs = InputManager()
     layers = LayerManager()
     mapper = ActionMapper()
@@ -34,13 +37,15 @@ def main() -> None:
 
     midi_output = MidiOutput()
 
-    traktor_feedback.connect()
-
     dispatcher = Dispatcher()
     dispatcher.add_output(DebugOutput())
     dispatcher.add_output(midi_output)
 
+    if interface_output is not None:
+        dispatcher.add_output(interface_output)
+
     try:
+        traktor_feedback.connect()
         inputs.connect()
         midi_output.connect()
 
@@ -48,6 +53,17 @@ def main() -> None:
             inputs=inputs,
             layers=layers,
         )
+
+        if interface_output is not None:
+            interface_output.update_status(
+                controller="Verbunden",
+                midi="plaiiboy",
+                layer=layers.active_layer.number,
+                activeDeck=action_processor.state.active_deck.value,
+                seekMode=action_processor.state.seek_mode.label,
+                lastInput="—",
+                lastAction="—",
+            )
 
         print("plaiiboy")
         print("Framework gestartet.")
@@ -61,11 +77,22 @@ def main() -> None:
 
             for warning_deck in track_end_warnings:
                 print(f"Track-End-Warnung: {warning_deck}")
-
                 inputs.rumble_track_end_warning()
+
             controller_events = inputs.poll()
 
             for controller_event in controller_events:
+                control_name = getattr(
+                    controller_event.control,
+                    "name",
+                    str(controller_event.control),
+                )
+
+                if interface_output is not None:
+                    interface_output.update_status(
+                        lastInput=control_name,
+                    )
+
                 print(
                     f"input={controller_event.event_type.value:<25} "
                     f"control={controller_event.control.value:<18} "
@@ -85,6 +112,11 @@ def main() -> None:
                         layers=layers,
                     )
 
+                    if interface_output is not None:
+                        interface_output.update_status(
+                            layer=layers.active_layer.number,
+                        )
+
                     continue
 
                 mapped_events = mapper.map_event(
@@ -103,14 +135,29 @@ def main() -> None:
                                 pulse_count=1,
                             )
 
+                            if interface_output is not None:
+                                interface_output.update_status(
+                                    activeDeck=1,
+                                )
+
                         elif action_event.action is Action.FEEDBACK_ACTIVE_DECK_2:
                             print("Aktives Bearbeitungsdeck: 2")
+
+                            if interface_output is not None:
+                                interface_output.update_status(
+                                    activeDeck=2,
+                                )
 
                         elif action_event.action is Action.CYCLE_SEEK_SPEED:
                             print(
                                 "Touchpad-Suchmodus: "
                                 f"{action_processor.state.seek_mode.label}"
                             )
+
+                            if interface_output is not None:
+                                interface_output.update_status(
+                                    seekMode=(action_processor.state.seek_mode.label),
+                                )
 
                         dispatcher.dispatch(action_event)
 
@@ -124,4 +171,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    run_core()
