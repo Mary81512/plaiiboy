@@ -12,6 +12,16 @@ export class Controller3D {
     this.originalRotations = {};
     this.targets = {};
     this.animationSpeed = {};
+    this.controllerTargetRotation = new THREE.Euler(0, 0, 0, "YXZ");
+    this.controllerRotationSpeed = 0.15;
+  }
+
+  setOrientation(pitch = 0, yaw = 0, roll = 0) {
+    if (!this.controller) {
+      return;
+    }
+
+    this.controllerTargetRotation.set(pitch, yaw, roll, "YXZ");
   }
 
   load() {
@@ -115,17 +125,6 @@ export class Controller3D {
       return;
     }
 
-    target.position.copy(originalPosition);
-
-    target.position.x += offset.x ?? 0;
-    target.position.y += offset.y ?? 0;
-    target.position.z += offset.z ?? 0;
-
-    if (!originalPosition || !target) {
-      console.warn(`Animationsziel fehlt: ${name}`);
-      return;
-    }
-
     target.copy(originalPosition);
 
     target.x += offset.x ?? 0;
@@ -221,6 +220,22 @@ export class Controller3D {
       part.rotation.y += (target.rotation.y - part.rotation.y) * speed;
 
       part.rotation.z += (target.rotation.z - part.rotation.z) * speed;
+
+      if (this.controller) {
+        const speed = this.controllerRotationSpeed;
+
+        this.controller.rotation.x +=
+          (this.controllerTargetRotation.x - this.controller.rotation.x) *
+          speed;
+
+        this.controller.rotation.y +=
+          (this.controllerTargetRotation.y - this.controller.rotation.y) *
+          speed;
+
+        this.controller.rotation.z +=
+          (this.controllerTargetRotation.z - this.controller.rotation.z) *
+          speed;
+      }
     }
   }
 
