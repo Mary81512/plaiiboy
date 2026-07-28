@@ -99,14 +99,13 @@ export class Controller3D {
     );
   }
   setButtonPressed(name, pressed) {
-    const part = this.parts[name];
     const originalPosition = this.originalPositions[name];
+    const target = this.targets[name];
 
-    if (!part || !originalPosition) {
+    if (!originalPosition || !target) {
+      console.warn(`Animationsziel fehlt: ${name}`);
       return;
     }
-
-    const target = this.targets[name];
 
     target.copy(originalPosition);
 
