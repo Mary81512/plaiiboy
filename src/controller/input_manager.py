@@ -58,3 +58,8 @@ class InputManager:
         events.extend(touch_events)
 
         return events
+
+    def rumble_track_end_warning(
+        self,
+    ) -> None:
+        self._controller.rumble_track_end_warning()

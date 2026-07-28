@@ -90,7 +90,7 @@ def test_seek_uses_active_deck() -> None:
     )
 
     assert events
-    assert all(event.action is Action.DECK_1_SEEK_FORWARD for event in events)
+    assert all(event.action is Action.DECK_1_SEEK_FINE_FORWARD for event in events)
 
 
 def test_seek_speed_changes_pulse_count() -> None:

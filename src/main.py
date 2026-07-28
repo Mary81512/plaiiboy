@@ -5,6 +5,7 @@ from core.dispatcher import Dispatcher
 from core.events import Button, EventType
 from core.layers import LayerManager
 from core.mapping import ActionMapper
+from inputs.traktor_feedback import TraktorFeedbackInput
 from outputs.debug import DebugOutput
 from outputs.midi import MidiOutput
 
@@ -29,8 +30,11 @@ def main() -> None:
     layers = LayerManager()
     mapper = ActionMapper()
     action_processor = ActionProcessor()
+    traktor_feedback = TraktorFeedbackInput()
 
     midi_output = MidiOutput()
+
+    traktor_feedback.connect()
 
     dispatcher = Dispatcher()
     dispatcher.add_output(DebugOutput())
@@ -53,6 +57,12 @@ def main() -> None:
         print("Beenden mit Ctrl + C.\n")
 
         while True:
+            track_end_warnings = traktor_feedback.poll()
+
+            for warning_deck in track_end_warnings:
+                print(f"Track-End-Warnung: {warning_deck}")
+
+                inputs.rumble_track_end_warning()
             controller_events = inputs.poll()
 
             for controller_event in controller_events:
@@ -96,10 +106,6 @@ def main() -> None:
                         elif action_event.action is Action.FEEDBACK_ACTIVE_DECK_2:
                             print("Aktives Bearbeitungsdeck: 2")
 
-                            inputs.rumble_pulses(
-                                pulse_count=2,
-                            )
-
                         elif action_event.action is Action.CYCLE_SEEK_SPEED:
                             print(
                                 "Touchpad-Suchmodus: "
@@ -114,6 +120,7 @@ def main() -> None:
     finally:
         dispatcher.close()
         inputs.close()
+        traktor_feedback.close()
 
 
 if __name__ == "__main__":

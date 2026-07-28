@@ -129,24 +129,45 @@ class DualShock4:
     def rumble_pulses(
         self,
         pulse_count: int,
-        duration: float = 0.08,
-        pause: float = 0.07,
-        strength: int = 150,
+        delay: float = 0.12,
+        duration: float = 0.10,
+        strength: int = 285,
     ) -> None:
-        for pulse_index in range(pulse_count):
+        if pulse_count <= 0:
+            return
+
+        time.sleep(delay)
+
+        self.set_rumble(
+            small_motor=strength,
+            large_motor=0,
+        )
+
+        time.sleep(duration)
+
+        self.set_rumble(
+            small_motor=0,
+            large_motor=0,
+        )
+
+    def rumble_track_end_warning(
+        self,
+    ) -> None:
+        for pulse_index in range(3):
             self.set_rumble(
-                small_motor=0,
-                large_motor=strength,
+                small_motor=255,
+                large_motor=80,
             )
-            time.sleep(duration)
+
+            time.sleep(0.16)
 
             self.set_rumble(
                 small_motor=0,
                 large_motor=0,
             )
 
-            if pulse_index < pulse_count - 1:
-                time.sleep(pause)
+            if pulse_index < 2:
+                time.sleep(0.18)
 
     def _write_output_report(self) -> None:
         if self._device is None:
@@ -154,19 +175,24 @@ class DualShock4:
 
         report = bytearray(BLUETOOTH_REPORT_SIZE)
 
+        # Bluetooth-Ausgabebericht.
         report[0] = BLUETOOTH_OUTPUT_REPORT_ID
-
-        # Bluetooth-HID-Ausgabe und CRC aktivieren.
         report[1] = BLUETOOTH_HARDWARE_CONTROL
         report[2] = 0x00
 
-        # DualShock-4-Ausgabedaten.
-        report[4] = self._small_motor
-        report[5] = self._large_motor
+        # Sowohl Motor- als auch LED-Daten sind gültig.
+        report[3] = 0x03
+        report[4] = 0x00
+        report[5] = 0x00
 
-        report[6] = self._lightbar_red
-        report[7] = self._lightbar_green
-        report[8] = self._lightbar_blue
+        # Vibrationsmotoren.
+        report[6] = self._small_motor
+        report[7] = self._large_motor
+
+        # Lichtleiste.
+        report[8] = self._lightbar_red
+        report[9] = self._lightbar_green
+        report[10] = self._lightbar_blue
 
         crc_data = bytes([BLUETOOTH_OUTPUT_CRC_SEED]) + bytes(report[:-4])
         crc = zlib.crc32(crc_data) & 0xFFFFFFFF

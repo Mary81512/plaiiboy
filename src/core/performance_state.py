@@ -21,9 +21,9 @@ class SeekMode(Enum):
     @property
     def label(self) -> str:
         labels = {
-            SeekMode.FINE: "Fine / Jog",
+            SeekMode.FINE: "8 Takte",
             SeekMode.FOUR_BARS: "4 Takte",
-            SeekMode.EIGHT_BARS: "8 Takte",
+            SeekMode.EIGHT_BARS: "1 Takt",
         }
 
         return labels[self]
