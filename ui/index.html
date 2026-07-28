@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>plaiiboy</title>
+
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <main class="app">
+      <header class="header">
+        <div>
+          <p class="eyebrow">Controller Framework</p>
+          <h1>plaiiboy</h1>
+        </div>
+
+        <div class="connection">
+          <span class="connection-dot"></span>
+          Interface aktiv
+        </div>
+      </header>
+
+      <section class="dashboard">
+        <article class="controller-preview">
+          <div class="preview-placeholder">
+            <span>3D Controller</span>
+            <small>folgt später</small>
+          </div>
+        </article>
+
+        <aside class="status-panel">
+          <h2>Live Status</h2>
+
+          <dl class="status-list">
+            <div>
+              <dt>Controller</dt>
+              <dd id="controller-status">Nicht verbunden</dd>
+            </div>
+
+            <div>
+              <dt>MIDI</dt>
+              <dd id="midi-status">plaiiboy</dd>
+            </div>
+
+            <div>
+              <dt>Layer</dt>
+              <dd id="layer-status">default</dd>
+            </div>
+
+            <div>
+              <dt>Aktives Deck</dt>
+              <dd id="deck-status">1</dd>
+            </div>
+
+            <div>
+              <dt>Seek-Modus</dt>
+              <dd id="seek-status">1</dd>
+            </div>
+          </dl>
+        </aside>
+      </section>
+
+      <section class="event-panel">
+        <div>
+          <span class="label">Letzte Eingabe</span>
+          <strong id="last-input">–</strong>
+        </div>
+
+        <div>
+          <span class="label">Letzte Aktion</span>
+          <strong id="last-action">–</strong>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
