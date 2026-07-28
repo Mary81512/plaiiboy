@@ -150,7 +150,11 @@ export class Controller3D {
 
   setButtonPressed(name, pressed) {
     this.setPositionOffset(name, {
-      z: pressed ? -0.2 : 0,
+      z: pressed ? -0.12 : 0,
+    });
+
+    this.setRotationOffset(name, {
+      x: pressed ? -0.05 : 0,
     });
   }
 
@@ -187,12 +191,23 @@ export class Controller3D {
 
     console.log("Bewege Teil:", partName, this.parts[partName]);
 
+    if (partName === "L1" || partName === "R1") {
+      this.setShoulderPressed(partName, active);
+      return;
+    }
+
     if (partName === "L2" || partName === "R2") {
       this.setTriggerPressed(partName, active);
       return;
     }
 
     this.setButtonPressed(partName, active);
+  }
+
+  setShoulderPressed(name, pressed) {
+    this.setRotationOffset(name, {
+      x: pressed ? -0.18 : 0,
+    });
   }
 
   setAnimationSpeed(name, speed) {

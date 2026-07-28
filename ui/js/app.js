@@ -235,26 +235,72 @@ function handleControllerEvent(event) {
   pulseControl(control);
 }
 
+const orientation = {
+  pitch: 0,
+  yaw: 0,
+  roll: 0,
+};
+
+let lastMotionTime = null;
+
 function handleMotion(motion) {
-  if (!motion || !scene3d?.controller) {
+  const controller = scene3d?.controller;
+
+  if (
+    !motion ||
+    !controller ||
+    typeof controller.setOrientation !== "function"
+  ) {
     return;
   }
+
+  const currentTime = performance.now();
+
+  if (lastMotionTime === null) {
+    lastMotionTime = currentTime;
+    return;
+  }
+
+  /*
+   * Vergangene Zeit in Sekunden.
+   * Große Sprünge werden begrenzt, etwa wenn das Fenster kurz hängt.
+   */
+  const deltaTime = Math.min((currentTime - lastMotionTime) / 1000, 0.05);
+
+  lastMotionTime = currentTime;
 
   const gyroX = Number(motion.gyroX ?? 0);
   const gyroY = Number(motion.gyroY ?? 0);
   const gyroZ = Number(motion.gyroZ ?? 0);
 
   /*
-   * Die Gyro-Werte sind rohe Sensordaten.
-   * Für die 3D-Darstellung skalieren wir sie zunächst vorsichtig herunter.
+   * Kleine Ruhewerte ignorieren, damit das Modell weniger driftet.
    */
-  const sensitivity = 0.00015;
+  const deadzone = 80;
 
-  const pitch = gyroX * sensitivity;
-  const yaw = gyroZ * sensitivity;
-  const roll = gyroY * sensitivity;
+  const filteredGyroX = Math.abs(gyroX) >= deadzone ? gyroX : 0;
 
-  scene3d.controller.setOrientation(pitch, yaw, roll);
+  const filteredGyroY = Math.abs(gyroY) >= deadzone ? gyroY : 0;
+
+  const filteredGyroZ = Math.abs(gyroZ) >= deadzone ? gyroZ : 0;
+
+  /*
+   * Rohwert → ungefährer Winkel pro Sekunde.
+   * Kann später nach Gefühl angepasst werden.
+   */
+  const sensitivity = 0.0012;
+
+  orientation.pitch += filteredGyroX * sensitivity * deltaTime;
+
+  orientation.yaw += filteredGyroZ * sensitivity * deltaTime;
+
+  orientation.roll += filteredGyroY * sensitivity * deltaTime;
+
+  controller.setOrientation(
+    orientation.pitch,
+    orientation.yaw,
+    orientation.roll,
+  );
 }
 
 window.plaiiboy = {
