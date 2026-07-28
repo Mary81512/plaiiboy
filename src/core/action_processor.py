@@ -1,7 +1,7 @@
 from collections.abc import Callable
 
 from core.actions import Action, ActionEvent
-from core.performance_state import BrowserFocus, Deck, PerformanceState
+from core.performance_state import BrowserFocus, Deck, PerformanceState, SeekMode
 
 ActionHandler = Callable[
     [ActionEvent],
@@ -79,12 +79,12 @@ class ActionProcessor:
         self,
         event: ActionEvent,
     ) -> list[ActionEvent]:
-        seek_speed = self._state.cycle_seek_speed()
+        seek_mode = self._state.cycle_seek_mode()
 
         return [
             ActionEvent(
                 action=Action.CYCLE_SEEK_SPEED,
-                value=float(seek_speed),
+                value=float(seek_mode.value),
                 source_event=event.source_event,
             )
         ]
@@ -164,50 +164,74 @@ class ActionProcessor:
         self,
         event: ActionEvent,
     ) -> list[ActionEvent]:
-        action = (
-            Action.DECK_1_SEEK_BACKWARD
-            if self._state.active_deck is Deck.DECK_1
-            else Action.DECK_2_SEEK_BACKWARD
+        action = self._resolve_seek_action(
+            backward=True,
         )
 
-        return self._create_seek_pulses(
-            event=event,
-            action=action,
-        )
+        return [
+            self._replace_action(
+                event=event,
+                action=action,
+            )
+        ]
 
     def _seek_forward(
         self,
         event: ActionEvent,
     ) -> list[ActionEvent]:
-        action = (
-            Action.DECK_1_SEEK_FORWARD
-            if self._state.active_deck is Deck.DECK_1
-            else Action.DECK_2_SEEK_FORWARD
-        )
-
-        return self._create_seek_pulses(
-            event=event,
-            action=action,
-        )
-
-    def _create_seek_pulses(
-        self,
-        event: ActionEvent,
-        action: Action,
-    ) -> list[ActionEvent]:
-        pulse_count = max(
-            1,
-            round(event.value * self._state.seek_speed),
+        action = self._resolve_seek_action(
+            backward=False,
         )
 
         return [
-            ActionEvent(
+            self._replace_action(
+                event=event,
                 action=action,
-                value=1.0,
-                source_event=event.source_event,
             )
-            for _ in range(pulse_count)
         ]
+
+    def _resolve_seek_action(
+        self,
+        backward: bool,
+    ) -> Action:
+        if self._state.active_deck is Deck.DECK_1:
+            mappings = {
+                SeekMode.FINE: (
+                    Action.DECK_1_SEEK_FINE_BACKWARD
+                    if backward
+                    else Action.DECK_1_SEEK_FINE_FORWARD
+                ),
+                SeekMode.FOUR_BARS: (
+                    Action.DECK_1_SEEK_4_BARS_BACKWARD
+                    if backward
+                    else Action.DECK_1_SEEK_4_BARS_FORWARD
+                ),
+                SeekMode.EIGHT_BARS: (
+                    Action.DECK_1_SEEK_8_BARS_BACKWARD
+                    if backward
+                    else Action.DECK_1_SEEK_8_BARS_FORWARD
+                ),
+            }
+        else:
+            mappings = {
+                SeekMode.FINE: (
+                    Action.DECK_2_SEEK_FINE_BACKWARD
+                    if backward
+                    else Action.DECK_2_SEEK_FINE_FORWARD
+                ),
+                SeekMode.FOUR_BARS: (
+                    Action.DECK_2_SEEK_4_BARS_BACKWARD
+                    if backward
+                    else Action.DECK_2_SEEK_4_BARS_FORWARD
+                ),
+                SeekMode.EIGHT_BARS: (
+                    Action.DECK_2_SEEK_8_BARS_BACKWARD
+                    if backward
+                    else Action.DECK_2_SEEK_8_BARS_FORWARD
+                ),
+            }
+
+        return mappings[self._state.seek_mode]
 
     def _resolve_active_deck_action(
         self,

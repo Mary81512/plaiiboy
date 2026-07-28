@@ -28,7 +28,7 @@ def main() -> None:
         print("Framework gestartet.")
         print(f"Aktiver Layer: {layers.active_layer.value}")
         print(f"Aktives Bearbeitungsdeck: {action_processor.state.active_deck.value}")
-        print(f"Touchpad-Suchgeschwindigkeit: {action_processor.state.seek_speed}")
+        print(f"Touchpad-Suchmodus: {action_processor.state.seek_mode.label}")
         print("Virtueller MIDI-Port: plaiiboy")
         print("Beenden mit Ctrl + C.\n")
 
@@ -65,8 +65,8 @@ def main() -> None:
 
                         elif action_event.action is Action.CYCLE_SEEK_SPEED:
                             print(
-                                "Touchpad-Suchgeschwindigkeit: "
-                                f"{int(action_event.value)}"
+                                "Touchpad-Suchmodus: "
+                                f"{action_processor.state.seek_mode.label}"
                             )
 
                         dispatcher.dispatch(action_event)

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+from time import sleep
 
 import mido
 
@@ -19,6 +20,7 @@ class MidiNoteMapping:
     channel: int = 0
     velocity: int = 127
     mode: MidiNoteMode = MidiNoteMode.PULSE
+    pulse_duration: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -72,11 +74,56 @@ MIDI_MAPPINGS: dict[Action, MidiMapping] = {
     # Browser List
     Action.BROWSER_LIST_UP: MidiNoteMapping(note=68),
     Action.BROWSER_LIST_DOWN: MidiNoteMapping(note=69),
-    # Touchpad-Seeking
-    Action.DECK_1_SEEK_BACKWARD: MidiNoteMapping(note=64),
-    Action.DECK_1_SEEK_FORWARD: MidiNoteMapping(note=65),
-    Action.DECK_2_SEEK_BACKWARD: MidiNoteMapping(note=66),
-    Action.DECK_2_SEEK_FORWARD: MidiNoteMapping(note=67),
+    # Touchpad Deck 1
+    Action.DECK_1_SEEK_FINE_BACKWARD: MidiNoteMapping(
+        note=70,
+        pulse_duration=0.05,
+    ),
+    Action.DECK_1_SEEK_FINE_FORWARD: MidiNoteMapping(
+        note=71,
+        pulse_duration=0.05,
+    ),
+    Action.DECK_1_SEEK_4_BARS_BACKWARD: MidiNoteMapping(
+        note=72,
+        pulse_duration=0.05,
+    ),
+    Action.DECK_1_SEEK_4_BARS_FORWARD: MidiNoteMapping(
+        note=73,
+        pulse_duration=0.05,
+    ),
+    Action.DECK_1_SEEK_8_BARS_BACKWARD: MidiNoteMapping(
+        note=74,
+        pulse_duration=0.05,
+    ),
+    Action.DECK_1_SEEK_8_BARS_FORWARD: MidiNoteMapping(
+        note=75,
+        pulse_duration=0.05,
+    ),
+    # Touchpad Deck 2
+    Action.DECK_2_SEEK_FINE_BACKWARD: MidiNoteMapping(
+        note=76,
+        pulse_duration=0.05,
+    ),
+    Action.DECK_2_SEEK_FINE_FORWARD: MidiNoteMapping(
+        note=77,
+        pulse_duration=0.05,
+    ),
+    Action.DECK_2_SEEK_4_BARS_BACKWARD: MidiNoteMapping(
+        note=78,
+        pulse_duration=0.05,
+    ),
+    Action.DECK_2_SEEK_4_BARS_FORWARD: MidiNoteMapping(
+        note=79,
+        pulse_duration=0.05,
+    ),
+    Action.DECK_2_SEEK_8_BARS_BACKWARD: MidiNoteMapping(
+        note=80,
+        pulse_duration=0.05,
+    ),
+    Action.DECK_2_SEEK_8_BARS_FORWARD: MidiNoteMapping(
+        note=81,
+        pulse_duration=0.05,
+    ),
 }
 
 
@@ -213,6 +260,10 @@ class MidiOutput(Output):
         )
 
         self._send_message(note_on)
+
+        if mapping.pulse_duration > 0:
+            sleep(mapping.pulse_duration)
+
         self._send_message(note_off)
 
     def _send_control_change(
