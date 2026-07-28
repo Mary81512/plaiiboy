@@ -107,11 +107,12 @@ export class Controller3D {
     part.position.copy(originalPosition);
 
     if (pressed) {
-      part.position.y -= 0.015;
+      part.position.z -= 0.15;
     }
   }
 
   setControlActive(control, active) {
+    console.log("3D-Eingabe:", control, active);
     const controlToPart = {
       CROSS: "Cross",
       CIRCLE: "Circle",
@@ -140,6 +141,8 @@ export class Controller3D {
     if (!partName) {
       return;
     }
+
+    console.log("Bewege Teil:", partName, this.parts[partName]);
 
     this.setButtonPressed(partName, active);
   }
