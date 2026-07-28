@@ -3,7 +3,7 @@ import zlib
 
 import hid
 
-from controller.state import ControllerState, TouchPoint
+from controller.state import ControllerState, MotionState, TouchPoint
 from controller_config import (
     BLUETOOTH_HARDWARE_CONTROL,
     BLUETOOTH_INPUT_REPORT_ID,
@@ -172,8 +172,6 @@ class DualShock4:
 
             if wave_index < wave_count - 1:
                 time.sleep(0.35)
-
-
 
     def _write_output_report(self) -> None:
         if self._device is None:
@@ -361,7 +359,8 @@ class DualShock4:
                 3,
             ),
         }
-        def _decode_motion(
+
+    def _decode_motion(
         self,
         report: list[int],
         data_offset: int,
@@ -399,7 +398,7 @@ class DualShock4:
         index: int,
     ) -> int:
         return int.from_bytes(
-            bytes(report[index:index + 2]),
+            bytes(report[index : index + 2]),
             byteorder="little",
             signed=True,
         )
@@ -467,5 +466,3 @@ class DualShock4:
             difference / STICK_POSITIVE_RANGE,
             3,
         )
-
-

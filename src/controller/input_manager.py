@@ -1,5 +1,6 @@
 from controller.dualshock import DualShock4
 from controller.event_generator import EventGenerator
+from controller.state import ControllerState
 from controller.touch_gesture_recognizer import (
     TouchGestureRecognizer,
 )
@@ -12,6 +13,8 @@ class InputManager:
 
         self._event_generator = EventGenerator()
         self._touch_gesture_recognizer = TouchGestureRecognizer()
+
+        self._latest_state: ControllerState | None = None
 
     def connect(self) -> None:
         self._event_generator.reset()
@@ -45,14 +48,21 @@ class InputManager:
         self._event_generator.reset()
         self._touch_gesture_recognizer.reset()
 
+        self._latest_state = None
+
+    @property
+    def latest_state(self) -> ControllerState | None:
+        return self._latest_state
+
     def poll(self) -> list[ControllerEvent]:
         state = self._controller.poll()
 
         if state is None:
             return []
 
-        events = self._event_generator.generate(state)
+        self._latest_state = state
 
+        events = self._event_generator.generate(state)
         touch_events = self._touch_gesture_recognizer.generate(state)
 
         events.extend(touch_events)
