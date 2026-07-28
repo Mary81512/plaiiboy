@@ -32,7 +32,7 @@ def run_interface(
 
     window = webview.create_window(
         title="plaiiboy",
-        url=interface_file.as_uri(),
+        url="../ui/index.html",
         js_api=api,
         width=1100,
         height=720,
@@ -53,7 +53,7 @@ def run_interface(
         )
         core_thread.start()
 
-    webview.start(debug=True)
+    webview.start(debug=True, http_server=True)
 
 
 if __name__ == "__main__":
