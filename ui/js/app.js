@@ -1,4 +1,5 @@
 import { Scene3D } from "./scene.js";
+let scene3d = null;
 
 function setText(id, value) {
   const element = document.getElementById(id);
@@ -160,6 +161,8 @@ function setControlActive(control, active) {
   elements.forEach((element) => {
     element.classList.toggle("is-active", active);
   });
+
+  scene3d?.controller?.setControlActive(control, active);
 }
 
 function pulseControl(control, duration = 180) {
@@ -290,5 +293,5 @@ async function notifyPythonThatInterfaceIsReady() {
 window.addEventListener("pywebviewready", notifyPythonThatInterfaceIsReady);
 
 window.addEventListener("DOMContentLoaded", () => {
-  const scene = new Scene3D(document.getElementById("controller3d"));
+  scene3d = new Scene3D(document.getElementById("controller3d"));
 });

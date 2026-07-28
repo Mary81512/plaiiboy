@@ -32,7 +32,7 @@ export class Scene3D {
     dir.position.set(4, 5, 3);
     this.scene.add(dir);
 
-    this.controller = new Controller3D(this.scene);
+    this.controller = new Controller3D(this.scene, this.camera);
     this.controller.load();
 
     window.addEventListener("resize", () => this.resize(container));

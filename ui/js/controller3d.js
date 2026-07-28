@@ -2,32 +2,145 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 export class Controller3D {
-  constructor(scene) {
+  constructor(scene, camera) {
     this.scene = scene;
+    this.camera = camera;
     this.loader = new GLTFLoader();
     this.controller = null;
+    this.parts = {};
+    this.originalPositions = {};
   }
 
-  async load() {
-    return new Promise((resolve, reject) => {
-      this.loader.load(
-        "../assets/plaiiboyv3.glb",
+  load() {
+    this.loader.load(
+      "./assets/plaiiboyv3.glb",
 
-        (gltf) => {
-          this.controller = gltf.scene;
+      (gltf) => {
+        this.controller = gltf.scene;
+        this.scene.add(this.controller);
+        const partNames = [
+          "Cross",
+          "Circle",
+          "Square",
+          "Triangle",
 
-          this.controller.scale.set(1, 1, 1);
-          this.controller.position.set(0, 0, 0);
+          "DpadUp",
+          "DpadDown",
+          "DpadLeft",
+          "DpadRight",
 
-          this.scene.add(this.controller);
+          "LeftStick",
+          "RightStick",
 
-          resolve(this.controller);
-        },
+          "L1",
+          "L2",
+          "R1",
+          "R2",
 
-        undefined,
+          "Share",
+          "Options",
+          "PS",
 
-        reject,
-      );
-    });
+          "Touchpad",
+          "Lightbar",
+        ];
+
+        partNames.forEach((name) => {
+          const part = this.controller.getObjectByName(name);
+
+          if (!part) {
+            console.warn(`Controller-Teil nicht gefunden: ${name}`);
+            return;
+          }
+
+          this.parts[name] = part;
+          this.originalPositions[name] = part.position.clone();
+        });
+
+        console.log("Gefundene Controller-Teile:", this.parts);
+
+        // Abmessungen des gesamten Modells bestimmen
+        const box = new THREE.Box3().setFromObject(this.controller);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+
+        // Modell exakt um den Weltursprung zentrieren
+        this.controller.position.sub(center);
+
+        const maxDimension = Math.max(size.x, size.y, size.z);
+
+        // Kamera automatisch passend vor das Modell stellen
+        const distance =
+          maxDimension /
+          (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)));
+
+        this.camera.position.set(0, maxDimension * 0.15, distance * 1.0);
+        this.camera.near = Math.max(distance / 100, 0.001);
+        this.camera.far = distance * 100;
+        this.camera.lookAt(0, 0, 0);
+        this.camera.updateProjectionMatrix();
+
+        console.log("Controller geladen:", this.controller);
+        console.log("Modellgröße:", size);
+      },
+
+      (progress) => {
+        if (progress.total > 0) {
+          const percent = Math.round((progress.loaded / progress.total) * 100);
+          console.log(`Controller wird geladen: ${percent}%`);
+        }
+      },
+
+      (error) => {
+        console.error("GLB konnte nicht geladen werden:", error);
+      },
+    );
+  }
+  setButtonPressed(name, pressed) {
+    const part = this.parts[name];
+    const originalPosition = this.originalPositions[name];
+
+    if (!part || !originalPosition) {
+      return;
+    }
+
+    part.position.copy(originalPosition);
+
+    if (pressed) {
+      part.position.y -= 0.015;
+    }
+  }
+
+  setControlActive(control, active) {
+    const controlToPart = {
+      CROSS: "Cross",
+      CIRCLE: "Circle",
+      SQUARE: "Square",
+      TRIANGLE: "Triangle",
+
+      DPAD_UP: "DpadUp",
+      DPAD_DOWN: "DpadDown",
+      DPAD_LEFT: "DpadLeft",
+      DPAD_RIGHT: "DpadRight",
+
+      L1: "L1",
+      L2: "L2",
+      R1: "R1",
+      R2: "R2",
+
+      SHARE: "Share",
+      OPTIONS: "Options",
+      PS: "PS",
+
+      TOUCHPAD_CLICK: "Touchpad",
+    };
+
+    const partName = controlToPart[control];
+
+    if (!partName) {
+      return;
+    }
+
+    this.setButtonPressed(partName, active);
   }
 }
