@@ -19,6 +19,26 @@ class InputManager:
 
         self._controller.connect()
 
+    def set_lightbar(
+        self,
+        red: int,
+        green: int,
+        blue: int,
+    ) -> None:
+        self._controller.set_lightbar(
+            red=red,
+            green=green,
+            blue=blue,
+        )
+
+    def rumble_pulses(
+        self,
+        pulse_count: int,
+    ) -> None:
+        self._controller.rumble_pulses(
+            pulse_count=pulse_count,
+        )
+
     def close(self) -> None:
         self._controller.close()
 

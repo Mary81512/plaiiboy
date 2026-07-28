@@ -16,7 +16,7 @@ CONTROLLER_MAPPINGS: dict[
     Layer,
     dict[MappingKey, Action],
 ] = {
-    Layer.DEFAULT: {
+    Layer.LAYER_1: {
         # Deck 1
         (
             Button.L1,

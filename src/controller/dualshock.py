@@ -24,6 +24,13 @@ class DualShock4:
     def __init__(self) -> None:
         self._device: hid.device | None = None
 
+        self._lightbar_red = 0
+        self._lightbar_green = 0
+        self._lightbar_blue = 0
+
+        self._small_motor = 0
+        self._large_motor = 0
+
     @property
     def connected(self) -> bool:
         return self._device is not None
@@ -95,6 +102,53 @@ class DualShock4:
         return None
 
     def _enable_full_bluetooth_reports(self) -> None:
+        self._write_output_report()
+
+    def set_lightbar(
+        self,
+        red: int,
+        green: int,
+        blue: int,
+    ) -> None:
+        self._lightbar_red = self._clamp_byte(red)
+        self._lightbar_green = self._clamp_byte(green)
+        self._lightbar_blue = self._clamp_byte(blue)
+
+        self._write_output_report()
+
+    def set_rumble(
+        self,
+        small_motor: int,
+        large_motor: int,
+    ) -> None:
+        self._small_motor = self._clamp_byte(small_motor)
+        self._large_motor = self._clamp_byte(large_motor)
+
+        self._write_output_report()
+
+    def rumble_pulses(
+        self,
+        pulse_count: int,
+        duration: float = 0.08,
+        pause: float = 0.07,
+        strength: int = 150,
+    ) -> None:
+        for pulse_index in range(pulse_count):
+            self.set_rumble(
+                small_motor=0,
+                large_motor=strength,
+            )
+            time.sleep(duration)
+
+            self.set_rumble(
+                small_motor=0,
+                large_motor=0,
+            )
+
+            if pulse_index < pulse_count - 1:
+                time.sleep(pause)
+
+    def _write_output_report(self) -> None:
         if self._device is None:
             raise RuntimeError("Controller ist nicht verbunden.")
 
@@ -102,12 +156,19 @@ class DualShock4:
 
         report[0] = BLUETOOTH_OUTPUT_REPORT_ID
 
-        # HID-Ausgabe aktiv, CRC aktiv, Abfrageintervall 4 ms.
+        # Bluetooth-HID-Ausgabe und CRC aktivieren.
         report[1] = BLUETOOTH_HARDWARE_CONTROL
         report[2] = 0x00
 
-        crc_data = bytes([BLUETOOTH_OUTPUT_CRC_SEED]) + bytes(report[:-4])
+        # DualShock-4-Ausgabedaten.
+        report[4] = self._small_motor
+        report[5] = self._large_motor
 
+        report[6] = self._lightbar_red
+        report[7] = self._lightbar_green
+        report[8] = self._lightbar_blue
+
+        crc_data = bytes([BLUETOOTH_OUTPUT_CRC_SEED]) + bytes(report[:-4])
         crc = zlib.crc32(crc_data) & 0xFFFFFFFF
 
         report[-4:] = crc.to_bytes(
@@ -121,15 +182,25 @@ class DualShock4:
             self.close()
 
             raise RuntimeError(
-                "Der Bluetooth-Vollmodus konnte nicht aktiviert werden."
+                "Der Bluetooth-Output-Report konnte nicht gesendet werden."
             ) from error
 
         if written <= 0:
-            self.close()
-
             raise RuntimeError(
                 "Der Controller hat den Bluetooth-Output-Report nicht angenommen."
             )
+
+    def _clamp_byte(
+        self,
+        value: int,
+    ) -> int:
+        return max(
+            0,
+            min(
+                255,
+                int(value),
+            ),
+        )
 
     def _decode_bluetooth_state(
         self,
