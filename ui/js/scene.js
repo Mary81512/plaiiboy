@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { Controller3D } from "./controller3d.js";
 
 export class Scene3D {
   constructor(container) {
@@ -30,6 +31,9 @@ export class Scene3D {
     const dir = new THREE.DirectionalLight(0xffffff, 2);
     dir.position.set(4, 5, 3);
     this.scene.add(dir);
+
+    this.controller = new Controller3D(this.scene);
+    this.controller.load();
 
     window.addEventListener("resize", () => this.resize(container));
 
