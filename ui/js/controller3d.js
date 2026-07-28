@@ -9,6 +9,7 @@ export class Controller3D {
     this.controller = null;
     this.parts = {};
     this.originalPositions = {};
+    this.originalRotations = {};
     this.targets = {};
     this.animationSpeed = {};
   }
@@ -57,7 +58,11 @@ export class Controller3D {
 
           this.parts[name] = part;
           this.originalPositions[name] = part.position.clone();
-          this.targets[name] = part.position.clone();
+          this.originalRotations[name] = part.rotation.clone();
+          this.targets[name] = {
+            position: part.position.clone(),
+            rotation: part.rotation.clone(),
+          };
           this.animationSpeed[name] = 0.25;
         });
 
@@ -110,11 +115,38 @@ export class Controller3D {
       return;
     }
 
+    target.position.copy(originalPosition);
+
+    target.position.x += offset.x ?? 0;
+    target.position.y += offset.y ?? 0;
+    target.position.z += offset.z ?? 0;
+
+    if (!originalPosition || !target) {
+      console.warn(`Animationsziel fehlt: ${name}`);
+      return;
+    }
+
     target.copy(originalPosition);
 
     target.x += offset.x ?? 0;
     target.y += offset.y ?? 0;
     target.z += offset.z ?? 0;
+  }
+
+  setRotationOffset(name, offset = {}) {
+    const originalRotation = this.originalRotations[name];
+    const target = this.targets[name];
+
+    if (!originalRotation || !target) {
+      console.warn(`Rotationsziel fehlt: ${name}`);
+      return;
+    }
+
+    target.rotation.copy(originalRotation);
+
+    target.rotation.x += offset.x ?? 0;
+    target.rotation.y += offset.y ?? 0;
+    target.rotation.z += offset.z ?? 0;
   }
 
   setButtonPressed(name, pressed) {
@@ -156,6 +188,11 @@ export class Controller3D {
 
     console.log("Bewege Teil:", partName, this.parts[partName]);
 
+    if (partName === "L2" || partName === "R2") {
+      this.setTriggerPressed(partName, active);
+      return;
+    }
+
     this.setButtonPressed(partName, active);
   }
 
@@ -171,10 +208,25 @@ export class Controller3D {
     for (const name in this.parts) {
       const part = this.parts[name];
       const target = this.targets[name];
+      const speed = this.animationSpeed[name];
 
-      if (!part || !target) continue;
+      if (!part || !target) {
+        continue;
+      }
 
-      part.position.lerp(target, this.animationSpeed[name]);
+      part.position.lerp(target.position, speed);
+
+      part.rotation.x += (target.rotation.x - part.rotation.x) * speed;
+
+      part.rotation.y += (target.rotation.y - part.rotation.y) * speed;
+
+      part.rotation.z += (target.rotation.z - part.rotation.z) * speed;
     }
+  }
+
+  setTriggerPressed(name, pressed) {
+    this.setRotationOffset(name, {
+      x: pressed ? -0.35 : 0,
+    });
   }
 }
