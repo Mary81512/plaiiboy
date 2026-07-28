@@ -235,8 +235,34 @@ function handleControllerEvent(event) {
   pulseControl(control);
 }
 
+function handleMotion(motion) {
+  if (!motion || !scene3d?.controller) {
+    return;
+  }
+
+  const gyroX = Number(motion.gyroX ?? 0);
+  const gyroY = Number(motion.gyroY ?? 0);
+  const gyroZ = Number(motion.gyroZ ?? 0);
+
+  /*
+   * Die Gyro-Werte sind rohe Sensordaten.
+   * Für die 3D-Darstellung skalieren wir sie zunächst vorsichtig herunter.
+   */
+  const sensitivity = 0.00015;
+
+  const pitch = gyroX * sensitivity;
+  const yaw = gyroZ * sensitivity;
+  const roll = gyroY * sensitivity;
+
+  scene3d.controller.setOrientation(pitch, yaw, roll);
+}
+
 window.plaiiboy = {
   updateStatus(status) {
+    if (status.motion !== undefined) {
+      handleMotion(status.motion);
+    }
+
     if (status.controllerEvent !== undefined) {
       handleControllerEvent(status.controllerEvent);
     }

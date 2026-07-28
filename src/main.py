@@ -81,6 +81,24 @@ def run_core(
 
             controller_events = inputs.poll()
 
+            if (
+                interface_output is not None
+                and inputs.latest_state is not None
+                and inputs.latest_state.motion is not None
+            ):
+                motion = inputs.latest_state.motion
+
+                interface_output.update_status(
+                    motion={
+                        "gyroX": motion.gyro_x,
+                        "gyroY": motion.gyro_y,
+                        "gyroZ": motion.gyro_z,
+                        "accelX": motion.accel_x,
+                        "accelY": motion.accel_y,
+                        "accelZ": motion.accel_z,
+                    },
+                )
+
             for controller_event in controller_events:
                 control_name = getattr(
                     controller_event.control,
