@@ -237,11 +237,22 @@ function handleControllerEvent(event) {
 
 const orientation = {
   pitch: 0,
-  yaw: 0,
   roll: 0,
 };
 
-let lastMotionTime = null;
+let motionCalibration = null;
+
+function wrapAngle(angle) {
+  while (angle > Math.PI) {
+    angle -= Math.PI * 2;
+  }
+
+  while (angle < -Math.PI) {
+    angle += Math.PI * 2;
+  }
+
+  return angle;
+}
 
 function handleMotion(motion) {
   const controller = scene3d?.controller;
@@ -254,53 +265,53 @@ function handleMotion(motion) {
     return;
   }
 
-  const currentTime = performance.now();
+  const accelX = Number(motion.accelX ?? 0);
+  const accelY = Number(motion.accelY ?? 0);
+  const accelZ = Number(motion.accelZ ?? 0);
 
-  if (lastMotionTime === null) {
-    lastMotionTime = currentTime;
+  if (
+    !Number.isFinite(accelX) ||
+    !Number.isFinite(accelY) ||
+    !Number.isFinite(accelZ)
+  ) {
     return;
   }
 
-  /*
-   * Vergangene Zeit in Sekunden.
-   * Große Sprünge werden begrenzt, etwa wenn das Fenster kurz hängt.
-   */
-  const deltaTime = Math.min((currentTime - lastMotionTime) / 1000, 0.05);
-
-  lastMotionTime = currentTime;
-
-  const gyroX = Number(motion.gyroX ?? 0);
-  const gyroY = Number(motion.gyroY ?? 0);
-  const gyroZ = Number(motion.gyroZ ?? 0);
-
-  /*
-   * Kleine Ruhewerte ignorieren, damit das Modell weniger driftet.
-   */
-  const deadzone = 80;
-
-  const filteredGyroX = Math.abs(gyroX) >= deadzone ? gyroX : 0;
-
-  const filteredGyroY = Math.abs(gyroY) >= deadzone ? gyroY : 0;
-
-  const filteredGyroZ = Math.abs(gyroZ) >= deadzone ? gyroZ : 0;
-
-  /*
-   * Rohwert → ungefährer Winkel pro Sekunde.
-   * Kann später nach Gefühl angepasst werden.
-   */
-  const sensitivity = 0.0012;
-
-  orientation.pitch += filteredGyroX * sensitivity * deltaTime;
-
-  orientation.yaw += filteredGyroZ * sensitivity * deltaTime;
-
-  orientation.roll += filteredGyroY * sensitivity * deltaTime;
-
-  controller.setOrientation(
-    orientation.pitch,
-    orientation.yaw,
-    orientation.roll,
+  const accelerationMagnitude = Math.sqrt(
+    accelX * accelX + accelY * accelY + accelZ * accelZ,
   );
+
+  if (accelerationMagnitude < 1) {
+    return;
+  }
+
+  const measuredPitch = Math.atan2(
+    -accelX,
+    Math.sqrt(accelY * accelY + accelZ * accelZ),
+  );
+
+  const measuredRoll = Math.atan2(accelY, accelZ);
+
+  if (motionCalibration === null) {
+    motionCalibration = {
+      pitch: measuredPitch,
+      roll: measuredRoll,
+    };
+
+    return;
+  }
+
+  const targetPitch = wrapAngle(measuredPitch - motionCalibration.pitch);
+
+  const targetRoll = wrapAngle(measuredRoll - motionCalibration.roll);
+
+  const smoothing = 0.25;
+
+  orientation.pitch += (targetPitch - orientation.pitch) * smoothing;
+
+  orientation.roll += (targetRoll - orientation.roll) * smoothing;
+
+  controller.setOrientation(orientation.roll, 0, -orientation.pitch);
 }
 
 function readAxis(axes, ...names) {

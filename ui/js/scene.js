@@ -4,7 +4,7 @@ import { Controller3D } from "./controller3d.js";
 export class Scene3D {
   constructor(container) {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x181818);
+    this.scene.background = new THREE.Color(0xe9edf3);
 
     this.camera = new THREE.PerspectiveCamera(
       45,
