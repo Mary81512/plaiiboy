@@ -213,6 +213,31 @@ function handleControllerEvent(event) {
     showTouchpadFeedback(control);
   }
 
+  /*
+   * L2 und R2 liefern beim Drücken mehrere analoge Zwischenwerte.
+   * Deshalb hier keinen kurzen Pulse auslösen, sondern ausschließlich
+   * anhand des aktuellen Triggerwertes gedrückt oder losgelassen anzeigen.
+   */
+  if (control === "L2" || control === "R2") {
+    const triggerPressed =
+      eventType.includes("PRESSED") ||
+      eventType.includes("HELD") ||
+      value > 0.08;
+
+    const triggerReleased =
+      eventType.includes("RELEASED") ||
+      eventType.includes("UP") ||
+      value <= 0.08;
+
+    if (triggerReleased) {
+      setControlActive(control, false);
+    } else if (triggerPressed) {
+      setControlActive(control, true);
+    }
+
+    return;
+  }
+
   const isPressed =
     eventType.includes("PRESSED") || eventType.includes("HELD") || value > 0.5;
 
@@ -576,20 +601,54 @@ window.plaiiboy = {
   },
 };
 
+let interfaceReadyWasNotified = false;
+
 async function notifyPythonThatInterfaceIsReady() {
-  if (!window.pywebview?.api) {
-    return;
+  if (interfaceReadyWasNotified || !window.pywebview?.api) {
+    return false;
   }
+
+  interfaceReadyWasNotified = true;
 
   try {
     await window.pywebview.api.ready();
+    console.log("Python-Interface verbunden.");
+    return true;
   } catch (error) {
+    interfaceReadyWasNotified = false;
+
     console.error("Interface konnte nicht initialisiert werden:", error);
+
+    return false;
   }
 }
 
+/*
+ * Normaler Weg: PyWebView meldet, dass seine API bereitsteht.
+ */
 window.addEventListener("pywebviewready", notifyPythonThatInterfaceIsReady);
 
+/*
+ * Fallback für den Fall, dass pywebviewready bereits ausgelöst
+ * wurde, bevor dieses JavaScript-Modul geladen war.
+ */
 window.addEventListener("DOMContentLoaded", () => {
   scene3d = new Scene3D(document.getElementById("controller3d"));
+
+  notifyPythonThatInterfaceIsReady();
+
+  const readyCheck = window.setInterval(async () => {
+    const connected = await notifyPythonThatInterfaceIsReady();
+
+    if (connected || interfaceReadyWasNotified) {
+      window.clearInterval(readyCheck);
+    }
+  }, 100);
+
+  /*
+   * Sicherheitsstopp, falls PyWebView tatsächlich nicht verfügbar ist.
+   */
+  window.setTimeout(() => {
+    window.clearInterval(readyCheck);
+  }, 10000);
 });

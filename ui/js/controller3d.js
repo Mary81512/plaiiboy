@@ -111,7 +111,7 @@ export class Controller3D {
           maxDimension /
           (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)));
 
-        this.camera.position.set(0, maxDimension * -0.05, distance * 1.0);
+        this.camera.position.set(0, maxDimension * 0, distance * 0.8);
         this.camera.near = Math.max(distance / 100, 0.001);
         this.camera.far = distance * 100;
         this.camera.lookAt(0, 0, 0);
@@ -176,23 +176,79 @@ export class Controller3D {
 
     const maximumTilt = 0.32;
 
+    /*
+     * Ursprüngliche Rotation wieder als Ausgangspunkt nehmen.
+     * Dadurch können X und Y gleichzeitig kombiniert werden.
+     */
     target.rotation.copy(originalRotation);
 
     /*
-     * Vor/zurück wird über die lokale X-Achse gekippt.
-     * Links/rechts wird über die lokale Z-Achse gekippt.
+     * Vor und zurück.
      */
     target.rotation.x += y * maximumTilt;
-    target.rotation.z -= x * maximumTilt;
+
+    /*
+     * Links und rechts.
+     */
+    target.rotation.y -= x * maximumTilt;
   }
 
   setButtonPressed(name, pressed) {
+    let depth = -0.12;
+    let rotationX = -0.05;
+
+    /*
+     * Formtasten stärker eindrücken.
+     */
+    if (
+      name === "Cross" ||
+      name === "Circle" ||
+      name === "Square" ||
+      name === "Triangle"
+    ) {
+      depth = -0.22;
+      rotationX = -0.03;
+    }
+
+    /*
+     * Steuerkreuz stärker eindrücken.
+     */
+    if (
+      name === "DpadUp" ||
+      name === "DpadDown" ||
+      name === "DpadLeft" ||
+      name === "DpadRight"
+    ) {
+      depth = -0.22;
+      rotationX = -0.03;
+    }
+
+    /*
+     * PS-Taste etwas tiefer.
+     */
+    if (name === "PS") {
+      depth = -0.18;
+      rotationX = 0;
+    }
+
     this.setPositionOffset(name, {
-      z: pressed ? -0.12 : 0,
+      z: pressed ? depth : 0,
     });
 
     this.setRotationOffset(name, {
-      x: pressed ? -0.05 : 0,
+      x: pressed ? rotationX : 0,
+    });
+  }
+
+  setShoulderPressed(name, pressed) {
+    this.setPositionOffset(name, {
+      y: pressed ? -0.2 : 0,
+    });
+
+    this.setRotationOffset(name, {
+      x: 0,
+      y: 0,
+      z: 0,
     });
   }
 
@@ -242,12 +298,6 @@ export class Controller3D {
     }
 
     this.setButtonPressed(partName, active);
-  }
-
-  setShoulderPressed(name, pressed) {
-    this.setRotationOffset(name, {
-      x: pressed ? -0.18 : 0,
-    });
   }
 
   setAnimationSpeed(name, speed) {

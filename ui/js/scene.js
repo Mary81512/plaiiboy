@@ -1,10 +1,10 @@
 import * as THREE from "three";
+import { EXRLoader } from "three/addons/loaders/EXRLoader.js";
 import { Controller3D } from "./controller3d.js";
 
 export class Scene3D {
   constructor(container) {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0xe9edf3);
 
     this.camera = new THREE.PerspectiveCamera(
       45,
@@ -26,69 +26,84 @@ export class Scene3D {
     this.renderer.setSize(container.clientWidth, container.clientHeight);
 
     /*
-     * Realistischere Helligkeits- und Farbdarstellung.
+     * Farb- und Helligkeitsdarstellung.
      */
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.25;
+
+    this.renderer.toneMappingExposure = 1.0;
 
     /*
-     * Schatten aktivieren.
+     * Schatten bleiben aktiviert.
+     * Ohne zusätzliche Lampe entstehen dadurch momentan
+     * allerdings keine klassischen gerichteten Schlagschatten.
      */
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
     container.appendChild(this.renderer.domElement);
 
     /*
-     * Weiches Grundlicht:
-     * hellt die dunklen Bereiche auf, ohne alles flach zu machen.
+     * Blender-EXR als sichtbarer Hintergrund
+     * und als Beleuchtung für das Modell.
      */
-    const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x667080, 1.65);
+    const exrLoader = new EXRLoader();
 
-    hemisphereLight.position.set(0, 5, 0);
-    this.scene.add(hemisphereLight);
+    exrLoader.load(
+      "./assets/sunrise.exr",
+
+      (texture) => {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+
+        this.scene.environment = texture;
+        this.scene.background = texture;
+
+        /*
+         * Blender-Viewport-Rotation:
+         * 49,4 Grad.
+         *
+         * Falls die Lichtseite spiegelverkehrt wirkt,
+         * hier -49.4 durch 49.4 ersetzen.
+         */
+        const environmentRotation = THREE.MathUtils.degToRad(-20.4);
+
+        this.scene.environmentRotation.set(0, environmentRotation, 0);
+
+        this.scene.backgroundRotation.set(0, environmentRotation, 0);
+
+        /*
+         * Stärke der EXR-Beleuchtung auf dem Controller.
+         */
+        this.scene.environmentIntensity = 1.0;
+
+        /*
+         * Helligkeit des sichtbaren Hintergrunds.
+         * Etwas niedriger als das Licht, damit er nicht blendet.
+         */
+        this.scene.backgroundIntensity = 0.9;
+
+        /*
+         * Leichte Unschärfe.
+         * Kleinerer Wert = schärferer Hintergrund.
+         */
+        this.scene.backgroundBlurriness = 0.0;
+
+        console.log("EXR-Umgebung geladen.");
+      },
+
+      undefined,
+
+      (error) => {
+        console.error("EXR konnte nicht geladen werden:", error);
+      },
+    );
 
     /*
-     * Hauptlicht von links oben.
+     * Controller laden.
      */
-    const keyLight = new THREE.DirectionalLight(0xffffff, 4.2);
-
-    keyLight.position.set(-4, 6, 5);
-    keyLight.castShadow = true;
-
-    keyLight.shadow.mapSize.set(2048, 2048);
-    keyLight.shadow.bias = -0.0005;
-    keyLight.shadow.normalBias = 0.025;
-
-    keyLight.shadow.camera.near = 0.1;
-    keyLight.shadow.camera.far = 30;
-    keyLight.shadow.camera.left = -8;
-    keyLight.shadow.camera.right = 8;
-    keyLight.shadow.camera.top = 8;
-    keyLight.shadow.camera.bottom = -8;
-
-    this.scene.add(keyLight);
-
-    /*
-     * Schwächeres Licht von rechts.
-     * Dadurch bleiben die rechten Griffe und Buttons sichtbar.
-     */
-    const fillLight = new THREE.DirectionalLight(0xcddcff, 1.8);
-
-    fillLight.position.set(5, 2, 4);
-    this.scene.add(fillLight);
-
-    /*
-     * Lichtkante von hinten/oben.
-     * Hebt die Außenkontur vom Hintergrund ab.
-     */
-    const rimLight = new THREE.DirectionalLight(0xffffff, 2.2);
-
-    rimLight.position.set(0, 5, -5);
-    this.scene.add(rimLight);
-
     this.controller = new Controller3D(this.scene, this.camera);
+
     this.controller.load();
 
     window.addEventListener("resize", () => this.resize(container));
