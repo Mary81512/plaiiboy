@@ -243,6 +243,8 @@ const orientation = {
 let motionCalibration = null;
 let latestMotionMeasurement = null;
 let isMotionCalibrated = false;
+let validMotionFrames = 0;
+let calibrationOverlayShown = false;
 let wasCalibrationButtonPressed = false;
 
 function wrapAngle(angle) {
@@ -398,6 +400,15 @@ function handleMotion(motion) {
     pitch: measuredPitch,
     roll: measuredRoll,
   };
+
+  if (!calibrationOverlayShown) {
+    validMotionFrames++;
+
+    if (validMotionFrames >= 30) {
+      calibrationOverlayShown = true;
+      createCalibrationOverlay();
+    }
+  }
 
   /*
    * Vor der manuellen Kalibrierung bewegt sich das Modell nicht.
@@ -580,5 +591,4 @@ window.addEventListener("pywebviewready", notifyPythonThatInterfaceIsReady);
 
 window.addEventListener("DOMContentLoaded", () => {
   scene3d = new Scene3D(document.getElementById("controller3d"));
-  createCalibrationOverlay();
 });

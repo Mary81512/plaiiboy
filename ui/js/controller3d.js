@@ -31,6 +31,24 @@ export class Controller3D {
       (gltf) => {
         this.controller = gltf.scene;
         this.scene.add(this.controller);
+        this.controller.traverse((object) => {
+          if (!object.isMesh) {
+            return;
+          }
+
+          object.castShadow = true;
+          object.receiveShadow = true;
+
+          /*
+           * Verhindert, dass mehrere Modellteile dasselbe
+           * Materialobjekt unbeabsichtigt gemeinsam verändern.
+           */
+          if (object.material) {
+            object.material = object.material.clone();
+
+            object.material.needsUpdate = true;
+          }
+        });
         const partNames = [
           "Cross",
           "Circle",
@@ -93,7 +111,7 @@ export class Controller3D {
           maxDimension /
           (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)));
 
-        this.camera.position.set(0, maxDimension * -0.5, distance * 1.0);
+        this.camera.position.set(0, maxDimension * -0.05, distance * 1.0);
         this.camera.near = Math.max(distance / 100, 0.001);
         this.camera.far = distance * 100;
         this.camera.lookAt(0, 0, 0);
