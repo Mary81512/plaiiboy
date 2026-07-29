@@ -101,6 +101,7 @@ def run_core(
                         axis.name: value
                         for axis, value in inputs.latest_state.axes.items()
                     },
+                    buttons=[button.name for button in inputs.latest_state.buttons],
                 )
 
             for controller_event in controller_events:

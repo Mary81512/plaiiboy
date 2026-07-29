@@ -93,7 +93,7 @@ export class Controller3D {
           maxDimension /
           (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)));
 
-        this.camera.position.set(0, maxDimension * 0.15, distance * 1.0);
+        this.camera.position.set(0, maxDimension * -0.5, distance * 1.0);
         this.camera.near = Math.max(distance / 100, 0.001);
         this.camera.far = distance * 100;
         this.camera.lookAt(0, 0, 0);

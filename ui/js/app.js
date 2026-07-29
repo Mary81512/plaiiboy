@@ -209,14 +209,6 @@ function handleControllerEvent(event) {
   const eventType = String(event.eventType ?? "");
   const value = Number(event.value ?? 0);
 
-  if (
-    !isMotionCalibrated &&
-    control === "CROSS" &&
-    (eventType.includes("PRESSED") || value > 0.5)
-  ) {
-    calibrateMotion();
-  }
-
   if (control.startsWith("TOUCHPAD_")) {
     showTouchpadFeedback(control);
   }
@@ -251,6 +243,7 @@ const orientation = {
 let motionCalibration = null;
 let latestMotionMeasurement = null;
 let isMotionCalibrated = false;
+let wasCalibrationButtonPressed = false;
 
 function wrapAngle(angle) {
   while (angle > Math.PI) {
@@ -323,6 +316,24 @@ function hideCalibrationOverlay() {
   if (overlay) {
     overlay.remove();
   }
+}
+
+function handleButtons(buttons) {
+  if (!Array.isArray(buttons)) {
+    return;
+  }
+
+  const isCrossPressed = buttons.includes("CROSS");
+
+  /*
+   * Nur auf den Übergang von nicht gedrückt zu gedrückt reagieren.
+   * So wird die Kalibrierung nicht in jedem Datenpaket erneut ausgelöst.
+   */
+  if (!isMotionCalibrated && isCrossPressed && !wasCalibrationButtonPressed) {
+    calibrateMotion();
+  }
+
+  wasCalibrationButtonPressed = isCrossPressed;
 }
 
 function calibrateMotion() {
@@ -501,6 +512,9 @@ function handleAxes(axes) {
 
 window.plaiiboy = {
   updateStatus(status) {
+    if (status.buttons !== undefined) {
+      handleButtons(status.buttons);
+    }
     if (status.axes !== undefined) {
       handleAxes(status.axes);
     }
