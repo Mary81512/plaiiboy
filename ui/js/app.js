@@ -209,6 +209,14 @@ function handleControllerEvent(event) {
   const eventType = String(event.eventType ?? "");
   const value = Number(event.value ?? 0);
 
+  if (
+    !isMotionCalibrated &&
+    control === "CROSS" &&
+    (eventType.includes("PRESSED") || value > 0.5)
+  ) {
+    calibrateMotion();
+  }
+
   if (control.startsWith("TOUCHPAD_")) {
     showTouchpadFeedback(control);
   }
@@ -241,6 +249,8 @@ const orientation = {
 };
 
 let motionCalibration = null;
+let latestMotionMeasurement = null;
+let isMotionCalibrated = false;
 
 function wrapAngle(angle) {
   while (angle > Math.PI) {
@@ -252,6 +262,87 @@ function wrapAngle(angle) {
   }
 
   return angle;
+}
+
+function createCalibrationOverlay() {
+  if (document.getElementById("motion-calibration-overlay")) {
+    return;
+  }
+
+  const overlay = document.createElement("div");
+
+  overlay.id = "motion-calibration-overlay";
+
+  overlay.innerHTML = `
+    <div style="
+      padding: 24px 30px;
+      border-radius: 18px;
+      background: rgba(20, 24, 30, 0.88);
+      color: white;
+      text-align: center;
+      font-family: sans-serif;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(12px);
+    ">
+      <div style="
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 10px;
+      ">
+        Controller kalibrieren
+      </div>
+
+      <div style="
+        font-size: 15px;
+        line-height: 1.45;
+        opacity: 0.9;
+      ">
+        Halte den Controller locker in deiner normalen Spielposition.
+        <br>
+        Drücke anschließend die X-Taste.
+      </div>
+    </div>
+  `;
+
+  Object.assign(overlay.style, {
+    position: "fixed",
+    inset: "0",
+    zIndex: "9999",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "rgba(235, 240, 246, 0.34)",
+  });
+
+  document.body.appendChild(overlay);
+}
+
+function hideCalibrationOverlay() {
+  const overlay = document.getElementById("motion-calibration-overlay");
+
+  if (overlay) {
+    overlay.remove();
+  }
+}
+
+function calibrateMotion() {
+  if (!latestMotionMeasurement) {
+    return;
+  }
+
+  motionCalibration = {
+    pitch: latestMotionMeasurement.pitch,
+    roll: latestMotionMeasurement.roll,
+  };
+
+  orientation.pitch = 0;
+  orientation.roll = 0;
+
+  isMotionCalibrated = true;
+
+  scene3d?.controller?.setOrientation(0, 0, 0);
+
+  hideCalibrationOverlay();
 }
 
 function handleMotion(motion) {
@@ -292,20 +383,40 @@ function handleMotion(motion) {
 
   const measuredRoll = Math.atan2(accelY, accelZ);
 
-  if (motionCalibration === null) {
-    motionCalibration = {
-      pitch: measuredPitch,
-      roll: measuredRoll,
-    };
+  latestMotionMeasurement = {
+    pitch: measuredPitch,
+    roll: measuredRoll,
+  };
 
+  /*
+   * Vor der manuellen Kalibrierung bewegt sich das Modell nicht.
+   */
+  if (!isMotionCalibrated || motionCalibration === null) {
     return;
   }
 
-  const targetPitch = wrapAngle(measuredPitch - motionCalibration.pitch);
+  let targetPitch = wrapAngle(measuredPitch - motionCalibration.pitch);
 
-  const targetRoll = wrapAngle(measuredRoll - motionCalibration.roll);
+  let targetRoll = wrapAngle(measuredRoll - motionCalibration.roll);
 
-  const smoothing = 0.25;
+  /*
+   * Kleine Sensorbewegungen um die Neutralstellung ignorieren.
+   * 0.006 Radiant entsprechen ungefähr 0,34 Grad.
+   */
+  const motionDeadzone = 0.006;
+
+  if (Math.abs(targetPitch - orientation.pitch) < motionDeadzone) {
+    targetPitch = orientation.pitch;
+  }
+
+  if (Math.abs(targetRoll - orientation.roll) < motionDeadzone) {
+    targetRoll = orientation.roll;
+  }
+
+  /*
+   * Niedriger als vorher: weniger Zittern und ruhigeres Bild.
+   */
+  const smoothing = 0.12;
 
   orientation.pitch += (targetPitch - orientation.pitch) * smoothing;
 
@@ -455,4 +566,5 @@ window.addEventListener("pywebviewready", notifyPythonThatInterfaceIsReady);
 
 window.addEventListener("DOMContentLoaded", () => {
   scene3d = new Scene3D(document.getElementById("controller3d"));
+  createCalibrationOverlay();
 });
