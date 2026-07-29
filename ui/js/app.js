@@ -359,6 +359,7 @@ function calibrateMotion() {
 }
 
 function handleMotion(motion) {
+  console.log("handleMotion");
   const controller = scene3d?.controller;
 
   if (
