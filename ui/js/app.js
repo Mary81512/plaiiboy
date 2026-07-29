@@ -303,8 +303,86 @@ function handleMotion(motion) {
   );
 }
 
+function readAxis(axes, ...names) {
+  for (const name of names) {
+    if (axes[name] !== undefined) {
+      return Number(axes[name]);
+    }
+  }
+
+  return 0;
+}
+
+function normalizeStickAxis(value) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  /*
+   * Unterstützt sowohl bereits normalisierte Werte von -1 bis 1
+   * als auch rohe Controllerwerte von 0 bis 255.
+   */
+  let normalized = value;
+
+  if (value < -1 || value > 1) {
+    normalized = (value - 127.5) / 127.5;
+  }
+
+  normalized = THREEClamp(normalized, -1, 1);
+
+  /*
+   * Kleine Bewegungen in der Stickmitte ausblenden.
+   */
+  const deadzone = 0.08;
+
+  if (Math.abs(normalized) < deadzone) {
+    return 0;
+  }
+
+  const direction = Math.sign(normalized);
+  const magnitude = (Math.abs(normalized) - deadzone) / (1 - deadzone);
+
+  return direction * magnitude;
+}
+
+function THREEClamp(value, minimum, maximum) {
+  return Math.min(Math.max(value, minimum), maximum);
+}
+
+function handleAxes(axes) {
+  const controller = scene3d?.controller;
+
+  if (!axes || !controller || typeof controller.setStickTilt !== "function") {
+    return;
+  }
+
+  const leftX = normalizeStickAxis(
+    readAxis(axes, "LEFT_STICK_X", "LEFT_X", "LX"),
+  );
+
+  const leftY = normalizeStickAxis(
+    readAxis(axes, "LEFT_STICK_Y", "LEFT_Y", "LY"),
+  );
+
+  const rightX = normalizeStickAxis(
+    readAxis(axes, "RIGHT_STICK_X", "RIGHT_X", "RX"),
+  );
+
+  const rightY = normalizeStickAxis(
+    readAxis(axes, "RIGHT_STICK_Y", "RIGHT_Y", "RY"),
+  );
+
+  controller.setStickTilt("LeftStick", leftX, leftY);
+
+  controller.setStickTilt("RightStick", rightX, rightY);
+}
+
 window.plaiiboy = {
   updateStatus(status) {
+    if (status.axes !== undefined) {
+      handleAxes(status.axes);
+    }
+
     if (status.motion !== undefined) {
       handleMotion(status.motion);
     }

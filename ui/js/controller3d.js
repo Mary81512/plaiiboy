@@ -148,6 +148,26 @@ export class Controller3D {
     target.rotation.z += offset.z ?? 0;
   }
 
+  setStickTilt(name, x = 0, y = 0) {
+    const originalRotation = this.originalRotations[name];
+    const target = this.targets[name];
+
+    if (!originalRotation || !target) {
+      return;
+    }
+
+    const maximumTilt = 0.32;
+
+    target.rotation.copy(originalRotation);
+
+    /*
+     * Vor/zurück wird über die lokale X-Achse gekippt.
+     * Links/rechts wird über die lokale Z-Achse gekippt.
+     */
+    target.rotation.x += y * maximumTilt;
+    target.rotation.z -= x * maximumTilt;
+  }
+
   setButtonPressed(name, pressed) {
     this.setPositionOffset(name, {
       z: pressed ? -0.12 : 0,
@@ -175,6 +195,8 @@ export class Controller3D {
       L2: "L2",
       R1: "R1",
       R2: "R2",
+      L3: "LeftStick",
+      R3: "RightStick",
 
       SHARE: "Share",
       OPTIONS: "Options",
@@ -216,6 +238,10 @@ export class Controller3D {
     }
 
     this.animationSpeed[name] = speed;
+
+    if (name === "LeftStick" || name === "RightStick") {
+      this.animationSpeed[name] = 0.4;
+    }
   }
 
   update() {
@@ -253,7 +279,7 @@ export class Controller3D {
 
   setTriggerPressed(name, pressed) {
     this.setRotationOffset(name, {
-      x: pressed ? -0.35 : 0,
+      x: pressed ? -0.9 : 0,
     });
   }
 }

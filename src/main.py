@@ -97,6 +97,10 @@ def run_core(
                         "accelY": motion.accel_y,
                         "accelZ": motion.accel_z,
                     },
+                    axes={
+                        axis.name: value
+                        for axis, value in inputs.latest_state.axes.items()
+                    },
                 )
 
             for controller_event in controller_events:
