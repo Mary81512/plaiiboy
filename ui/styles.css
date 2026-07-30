@@ -35,9 +35,10 @@ body {
 }
 
 .app {
-  width: min(1500px, 100%);
+  width: calc(100% - 48px);
+  max-width: 1760px;
   margin: 0 auto;
-  padding: 32px;
+  padding: 32px 0;
 }
 
 .header {
@@ -84,7 +85,7 @@ h1 {
 
 .dashboard {
   display: grid;
-  grid-template-columns: minmax(0, 2.4fr) minmax(280px, 0.65fr);
+  grid-template-columns: minmax(0, 1fr) 300px;
   gap: 20px;
 }
 
@@ -97,25 +98,15 @@ h1 {
 }
 
 .controller-preview {
-  min-height: 620px;
-  padding: 24px;
+  height: 740px;
+  padding: 18px;
 }
 
 .controller-stage {
-  display: flex;
-  min-height: 570px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   border-radius: 17px;
-  background:
-    radial-gradient(
-      circle at center,
-      rgba(124, 92, 255, 0.12),
-      transparent 58%
-    ),
-    rgba(9, 10, 14, 0.45);
 }
 
 .controller {
@@ -534,5 +525,5 @@ button[data-control].is-active {
 
 #controller3d {
   width: 100%;
-  height: 500px;
+  height: 100%;
 }

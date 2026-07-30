@@ -34,9 +34,9 @@ def run_interface(
         title="plaiiboy",
         url="../ui/index.html",
         js_api=api,
-        width=1100,
-        height=720,
-        min_size=(800, 560),
+        width=1500,
+        height=950,
+        min_size=(1100, 750),
     )
 
     if window is None:
