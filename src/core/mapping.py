@@ -149,7 +149,17 @@ CONTROLLER_MAPPINGS: dict[
             Axis.RIGHT_Y,
             EventType.AXIS_POSITIVE_TRIGGERED,
         ): Action.DECK_2_BPM_DECREASE,
-    }
+    },
+    Layer.LAYER_2: {
+        (
+            Button.L3,
+            EventType.BUTTON_PRESSED,
+        ): Action.CYCLE_DECK_1_EQ_BAND,
+        (
+            Button.R3,
+            EventType.BUTTON_PRESSED,
+        ): Action.CYCLE_DECK_2_EQ_BAND,
+    },
 }
 
 

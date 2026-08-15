@@ -1,9 +1,11 @@
+from time import monotonic
+
 from controller.input_manager import InputManager
 from core.action_processor import ActionProcessor
 from core.actions import Action
 from core.dispatcher import Dispatcher
-from core.events import Button, EventType
-from core.layers import LayerManager
+from core.events import Axis, Button, EventType
+from core.layers import Layer, LayerManager
 from core.mapping import ActionMapper
 from inputs.traktor_feedback import TraktorFeedbackInput
 from outputs.debug import DebugOutput
@@ -72,6 +74,9 @@ def run_core(
         print("Virtueller MIDI-Port: plaiiboy")
         print("Beenden mit Ctrl + C.\n")
 
+        # Wird für die relative Mixer-Steuerung verwendet.
+        last_mixer_update = monotonic()
+
         while True:
             track_end_warnings = traktor_feedback.poll()
 
@@ -80,6 +85,55 @@ def run_core(
                 inputs.rumble_track_end_warning()
 
             controller_events = inputs.poll()
+
+            # -------------------------------------------------------------
+            # Zeit seit dem letzten Schleifendurchlauf
+            # -------------------------------------------------------------
+
+            now = monotonic()
+            delta_time = now - last_mixer_update
+            last_mixer_update = now
+
+            # -------------------------------------------------------------
+            # Layer 2 – kontinuierliche Mixer-Steuerung
+            #
+            # Die Sticks werden hier direkt aus dem aktuellen
+            # Controllerzustand gelesen.
+            #
+            # Dadurch können wir einen Stick halten und der Wert
+            # verändert sich weiter, auch wenn kein neues AXIS_CHANGED
+            # Event erzeugt wird.
+            # -------------------------------------------------------------
+
+            if layers.active_layer is Layer.LAYER_2 and inputs.latest_state is not None:
+                axes = inputs.latest_state.axes
+
+                mixer_events = action_processor.process_mixer_axes(
+                    left_x=axes.get(
+                        Axis.LEFT_X,
+                        0.0,
+                    ),
+                    left_y=axes.get(
+                        Axis.LEFT_Y,
+                        0.0,
+                    ),
+                    right_x=axes.get(
+                        Axis.RIGHT_X,
+                        0.0,
+                    ),
+                    right_y=axes.get(
+                        Axis.RIGHT_Y,
+                        0.0,
+                    ),
+                    delta_time=delta_time,
+                )
+
+                for mixer_event in mixer_events:
+                    dispatcher.dispatch(mixer_event)
+
+            # -------------------------------------------------------------
+            # Interface – Controllerzustand
+            # -------------------------------------------------------------
 
             if interface_output is not None and inputs.latest_state is not None:
                 latest_state = inputs.latest_state
@@ -103,6 +157,10 @@ def run_core(
                     }
 
                 interface_output.update_status(**status_update)
+
+            # -------------------------------------------------------------
+            # Normale Controller-Events
+            # -------------------------------------------------------------
 
             for controller_event in controller_events:
                 control_name = getattr(
@@ -133,8 +191,10 @@ def run_core(
                     f"value={controller_event.value:.3f}"
                 )
 
-                # Die PS-Taste ist global und funktioniert deshalb
-                # unabhängig vom aktuell ausgewählten Layer.
+                # ---------------------------------------------------------
+                # PS = globaler Layer-Wechsel
+                # ---------------------------------------------------------
+
                 if (
                     controller_event.control is Button.PS
                     and controller_event.event_type is EventType.BUTTON_PRESSED
@@ -152,6 +212,10 @@ def run_core(
                         )
 
                     continue
+
+                # ---------------------------------------------------------
+                # Normales Mapping des aktiven Layers
+                # ---------------------------------------------------------
 
                 mapped_events = mapper.map_event(
                     event=controller_event,

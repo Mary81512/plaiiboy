@@ -7,6 +7,22 @@ class Deck(Enum):
     DECK_2 = 2
 
 
+class EQBand(Enum):
+    HIGH = 1
+    MID = 2
+    LOW = 3
+
+    @property
+    def label(self) -> str:
+        labels = {
+            EQBand.HIGH: "High",
+            EQBand.MID: "Mid",
+            EQBand.LOW: "Low",
+        }
+
+        return labels[self]
+
+
 class BrowserFocus(Enum):
     TREE = 1
     TREE_EXPANDED = 2
@@ -35,6 +51,20 @@ class PerformanceState:
     browser_focus: BrowserFocus = BrowserFocus.TREE
     seek_mode: SeekMode = SeekMode.FINE
 
+    deck_1_eq_band: EQBand = EQBand.HIGH
+    deck_2_eq_band: EQBand = EQBand.HIGH
+
+    deck_1_volume: float = 0.5
+    deck_2_volume: float = 0.5
+
+    deck_1_eq_high: float = 0.5
+    deck_1_eq_mid: float = 0.5
+    deck_1_eq_low: float = 0.5
+
+    deck_2_eq_high: float = 0.5
+    deck_2_eq_mid: float = 0.5
+    deck_2_eq_low: float = 0.5
+
     def toggle_active_deck(self) -> Deck:
         if self.active_deck is Deck.DECK_1:
             self.active_deck = Deck.DECK_2
@@ -58,3 +88,21 @@ class PerformanceState:
     ) -> BrowserFocus:
         self.browser_focus = focus
         return self.browser_focus
+
+    def cycle_deck_1_eq_band(self) -> EQBand:
+        bands = list(EQBand)
+        current_index = bands.index(self.deck_1_eq_band)
+        next_index = (current_index + 1) % len(bands)
+
+        self.deck_1_eq_band = bands[next_index]
+
+        return self.deck_1_eq_band
+
+    def cycle_deck_2_eq_band(self) -> EQBand:
+        bands = list(EQBand)
+        current_index = bands.index(self.deck_2_eq_band)
+        next_index = (current_index + 1) % len(bands)
+
+        self.deck_2_eq_band = bands[next_index]
+
+        return self.deck_2_eq_band
