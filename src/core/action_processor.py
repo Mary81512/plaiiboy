@@ -22,6 +22,7 @@ class ActionProcessor:
     # Änderung pro Sekunde bei vollem Stickausschlag.
     VOLUME_SPEED = 0.60
     EQ_SPEED = 0.60
+    MIXER_FX_SPEED = 0.50
 
     # Verhindert extrem große Sprünge, falls der Main-Loop
     # einmal kurz hängen sollte.
@@ -50,6 +51,8 @@ class ActionProcessor:
             Action.BROWSER_DOWN: self._browser_down,
             Action.BROWSER_LEVEL_UP: self._browser_level_up,
             Action.BROWSER_LEVEL_DOWN: self._browser_level_down,
+            Action.TOGGLE_MIXER_FX_A_DIRECTION: (self._toggle_mixer_fx_a_direction),
+            Action.TOGGLE_MIXER_FX_B_DIRECTION: (self._toggle_mixer_fx_b_direction),
         }
 
     @property
@@ -141,6 +144,89 @@ class ActionProcessor:
         )
 
         return events
+
+    def process_mixer_fx_triggers(
+        self,
+        l2: float,
+        r2: float,
+        delta_time: float,
+    ) -> list[ActionEvent]:
+        delta_time = max(
+            0.0,
+            min(
+                delta_time,
+                self.MAX_DELTA_TIME,
+            ),
+        )
+
+        if delta_time == 0.0:
+            return []
+
+        events: list[ActionEvent] = []
+
+        if l2 > 0.02:
+            delta = (
+                l2 * self.MIXER_FX_SPEED * delta_time * self._state.mixer_fx_a_direction
+            )
+
+            old_value = self._state.mixer_fx_a_amount
+            new_value = self._clamp(old_value + delta)
+
+            if new_value != old_value:
+                self._state.mixer_fx_a_amount = new_value
+
+                events.append(
+                    self._create_axis_action(
+                        action=Action.MIXER_FX_A_AMOUNT,
+                        axis=Axis.L2,
+                        action_value=new_value,
+                        stick_value=l2,
+                    )
+                )
+
+        if r2 > 0.02:
+            delta = (
+                r2 * self.MIXER_FX_SPEED * delta_time * self._state.mixer_fx_b_direction
+            )
+
+            old_value = self._state.mixer_fx_b_amount
+            new_value = self._clamp(old_value + delta)
+
+            if new_value != old_value:
+                self._state.mixer_fx_b_amount = new_value
+
+                events.append(
+                    self._create_axis_action(
+                        action=Action.MIXER_FX_B_AMOUNT,
+                        axis=Axis.R2,
+                        action_value=new_value,
+                        stick_value=r2,
+                    )
+                )
+
+        return events
+
+    def _toggle_mixer_fx_a_direction(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        direction = self._state.toggle_mixer_fx_a_direction()
+
+        label = "hoch" if direction > 0 else "runter"
+        print(f"Mixer FX A Richtung: {label}")
+
+        return []
+
+    def _toggle_mixer_fx_b_direction(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        direction = self._state.toggle_mixer_fx_b_direction()
+
+        label = "hoch" if direction > 0 else "runter"
+        print(f"Mixer FX B Richtung: {label}")
+
+        return []
 
     def _process_deck_stick(
         self,

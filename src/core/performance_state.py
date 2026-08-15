@@ -65,6 +65,12 @@ class PerformanceState:
     deck_2_eq_mid: float = 0.5
     deck_2_eq_low: float = 0.5
 
+    mixer_fx_a_amount: float = 0.5
+    mixer_fx_b_amount: float = 0.5
+
+    mixer_fx_a_direction: float = 1.0
+    mixer_fx_b_direction: float = 1.0
+
     def toggle_active_deck(self) -> Deck:
         if self.active_deck is Deck.DECK_1:
             self.active_deck = Deck.DECK_2
@@ -106,3 +112,11 @@ class PerformanceState:
         self.deck_2_eq_band = bands[next_index]
 
         return self.deck_2_eq_band
+
+    def toggle_mixer_fx_a_direction(self) -> float:
+        self.mixer_fx_a_direction *= -1.0
+        return self.mixer_fx_a_direction
+
+    def toggle_mixer_fx_b_direction(self) -> float:
+        self.mixer_fx_b_direction *= -1.0
+        return self.mixer_fx_b_direction

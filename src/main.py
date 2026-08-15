@@ -131,6 +131,21 @@ def run_core(
                 for mixer_event in mixer_events:
                     dispatcher.dispatch(mixer_event)
 
+                mixer_fx_events = action_processor.process_mixer_fx_triggers(
+                    l2=axes.get(
+                        Axis.L2,
+                        0.0,
+                    ),
+                    r2=axes.get(
+                        Axis.R2,
+                        0.0,
+                    ),
+                    delta_time=delta_time,
+                )
+
+                for mixer_fx_event in mixer_fx_events:
+                    dispatcher.dispatch(mixer_fx_event)
+
             # -------------------------------------------------------------
             # Interface – Controllerzustand
             # -------------------------------------------------------------

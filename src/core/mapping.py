@@ -179,14 +179,6 @@ CONTROLLER_MAPPINGS: dict[
         # L1                   = Mixer FX an / aus
         # -------------------------------------------------------------
         (
-            Button.DPAD_LEFT,
-            EventType.BUTTON_PRESSED,
-        ): Action.MIXER_FX_A_AMOUNT_DECREASE,
-        (
-            Button.DPAD_RIGHT,
-            EventType.BUTTON_PRESSED,
-        ): Action.MIXER_FX_A_AMOUNT_INCREASE,
-        (
             Button.DPAD_UP,
             EventType.BUTTON_PRESSED,
         ): Action.MIXER_FX_A_PREVIOUS,
@@ -197,7 +189,7 @@ CONTROLLER_MAPPINGS: dict[
         (
             Button.SHARE,
             EventType.BUTTON_PRESSED,
-        ): Action.MIXER_FX_A_LOAD,
+        ): Action.TOGGLE_MIXER_FX_A_DIRECTION,
         (
             Button.L1,
             EventType.BUTTON_PRESSED,
@@ -211,14 +203,6 @@ CONTROLLER_MAPPINGS: dict[
         # R1                 = Mixer FX an / aus
         # -------------------------------------------------------------
         (
-            Button.SQUARE,
-            EventType.BUTTON_PRESSED,
-        ): Action.MIXER_FX_B_AMOUNT_DECREASE,
-        (
-            Button.CIRCLE,
-            EventType.BUTTON_PRESSED,
-        ): Action.MIXER_FX_B_AMOUNT_INCREASE,
-        (
             Button.TRIANGLE,
             EventType.BUTTON_PRESSED,
         ): Action.MIXER_FX_B_PREVIOUS,
@@ -229,7 +213,7 @@ CONTROLLER_MAPPINGS: dict[
         (
             Button.OPTIONS,
             EventType.BUTTON_PRESSED,
-        ): Action.MIXER_FX_B_LOAD,
+        ): Action.TOGGLE_MIXER_FX_B_DIRECTION,
         (
             Button.R1,
             EventType.BUTTON_PRESSED,
