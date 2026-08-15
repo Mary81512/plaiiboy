@@ -171,6 +171,28 @@ CONTROLLER_MAPPINGS: dict[
             EventType.BUTTON_PRESSED,
         ): Action.CYCLE_DECK_2_EQ_BAND,
         # -------------------------------------------------------------
+        # Gain – Deck A
+        # -------------------------------------------------------------
+        (
+            Button.DPAD_LEFT,
+            EventType.BUTTON_PRESSED,
+        ): Action.DECK_1_GAIN_DECREASE,
+        (
+            Button.DPAD_RIGHT,
+            EventType.BUTTON_PRESSED,
+        ): Action.DECK_1_GAIN_INCREASE,
+        # -------------------------------------------------------------
+        # Gain – Deck B
+        # -------------------------------------------------------------
+        (
+            Button.SQUARE,
+            EventType.BUTTON_PRESSED,
+        ): Action.DECK_2_GAIN_DECREASE,
+        (
+            Button.CIRCLE,
+            EventType.BUTTON_PRESSED,
+        ): Action.DECK_2_GAIN_INCREASE,
+        # -------------------------------------------------------------
         # Mixer FX – Deck A
         #
         # D-Pad links / rechts = Amount - / +
