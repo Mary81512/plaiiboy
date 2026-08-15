@@ -209,26 +209,38 @@ MIDI_MAPPINGS: dict[Action, MidiMapping] = {
     # ---------------------------------------------------------------------
     # Layer 2 – Deck 1 EQ
     # ---------------------------------------------------------------------
+    # Deck A – 4 Band EQ
     Action.DECK_1_EQ_HIGH: MidiControlChangeMapping(
         control=22,
     ),
-    Action.DECK_1_EQ_MID: MidiControlChangeMapping(
+    Action.DECK_1_EQ_MID_HIGH: MidiControlChangeMapping(
         control=23,
     ),
-    Action.DECK_1_EQ_LOW: MidiControlChangeMapping(
+    Action.DECK_1_EQ_MID_LOW: MidiControlChangeMapping(
         control=24,
     ),
-    # ---------------------------------------------------------------------
-    # Layer 2 – Deck 2 EQ
-    # ---------------------------------------------------------------------
-    Action.DECK_2_EQ_HIGH: MidiControlChangeMapping(
+    Action.DECK_1_EQ_LOW: MidiControlChangeMapping(
         control=25,
     ),
-    Action.DECK_2_EQ_MID: MidiControlChangeMapping(
+    # Deck B – 4 Band EQ
+    Action.DECK_2_EQ_HIGH: MidiControlChangeMapping(
         control=26,
     ),
-    Action.DECK_2_EQ_LOW: MidiControlChangeMapping(
+    Action.DECK_2_EQ_MID_HIGH: MidiControlChangeMapping(
         control=27,
+    ),
+    Action.DECK_2_EQ_MID_LOW: MidiControlChangeMapping(
+        control=28,
+    ),
+    Action.DECK_2_EQ_LOW: MidiControlChangeMapping(
+        control=29,
+    ),
+    # Mixer FX Amount
+    Action.MIXER_FX_A_AMOUNT: MidiControlChangeMapping(
+        control=30,
+    ),
+    Action.MIXER_FX_B_AMOUNT: MidiControlChangeMapping(
+        control=31,
     ),
     # ---------------------------------------------------------------------
     # Layer 2 – Mixer FX Deck A
@@ -292,6 +304,32 @@ MIDI_MAPPINGS: dict[Action, MidiMapping] = {
     ),
     Action.DECK_2_GAIN_INCREASE: MidiNoteMapping(
         note=97,
+    ),
+    # Deck A – EQ Kill
+    Action.DECK_1_EQ_HIGH_TOGGLE: MidiNoteMapping(
+        note=98,
+    ),
+    Action.DECK_1_EQ_MID_HIGH_TOGGLE: MidiNoteMapping(
+        note=99,
+    ),
+    Action.DECK_1_EQ_MID_LOW_TOGGLE: MidiNoteMapping(
+        note=100,
+    ),
+    Action.DECK_1_EQ_LOW_TOGGLE: MidiNoteMapping(
+        note=101,
+    ),
+    # Deck B – EQ Kill
+    Action.DECK_2_EQ_HIGH_TOGGLE: MidiNoteMapping(
+        note=102,
+    ),
+    Action.DECK_2_EQ_MID_HIGH_TOGGLE: MidiNoteMapping(
+        note=103,
+    ),
+    Action.DECK_2_EQ_MID_LOW_TOGGLE: MidiNoteMapping(
+        note=104,
+    ),
+    Action.DECK_2_EQ_LOW_TOGGLE: MidiNoteMapping(
+        note=105,
     ),
 }
 

@@ -108,6 +108,8 @@ def run_core(
             if layers.active_layer is Layer.LAYER_2 and inputs.latest_state is not None:
                 axes = inputs.latest_state.axes
 
+                touches = inputs.latest_state.touches
+
                 mixer_events = action_processor.process_mixer_axes(
                     left_x=axes.get(
                         Axis.LEFT_X,
@@ -130,6 +132,13 @@ def run_core(
 
                 for mixer_event in mixer_events:
                     dispatcher.dispatch(mixer_event)
+
+                touchpad_volume_events = action_processor.process_touchpad_volumes(
+                    touches=touches,
+                )
+
+                for volume_event in touchpad_volume_events:
+                    dispatcher.dispatch(volume_event)
 
                 mixer_fx_events = action_processor.process_mixer_fx_triggers(
                     l2=axes.get(

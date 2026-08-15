@@ -162,14 +162,38 @@ CONTROLLER_MAPPINGS: dict[
         # -------------------------------------------------------------
         # EQ-Band Auswahl
         # -------------------------------------------------------------
+        # -------------------------------------------------------------
+        # 4-Band EQ – Deck A
+        # Stick hoch/runter = EQ-Band auswählen
+        # L3 = ausgewähltes Band Kill / On-Off
+        # -------------------------------------------------------------
+        (
+            Axis.LEFT_Y,
+            EventType.AXIS_NEGATIVE_TRIGGERED,
+        ): Action.DECK_1_EQ_BAND_UP,
+        (
+            Axis.LEFT_Y,
+            EventType.AXIS_POSITIVE_TRIGGERED,
+        ): Action.DECK_1_EQ_BAND_DOWN,
         (
             Button.L3,
             EventType.BUTTON_PRESSED,
-        ): Action.CYCLE_DECK_1_EQ_BAND,
+        ): Action.TOGGLE_DECK_1_EQ_BAND,
+        # -------------------------------------------------------------
+        # 4-Band EQ – Deck B
+        # -------------------------------------------------------------
+        (
+            Axis.RIGHT_Y,
+            EventType.AXIS_NEGATIVE_TRIGGERED,
+        ): Action.DECK_2_EQ_BAND_UP,
+        (
+            Axis.RIGHT_Y,
+            EventType.AXIS_POSITIVE_TRIGGERED,
+        ): Action.DECK_2_EQ_BAND_DOWN,
         (
             Button.R3,
             EventType.BUTTON_PRESSED,
-        ): Action.CYCLE_DECK_2_EQ_BAND,
+        ): Action.TOGGLE_DECK_2_EQ_BAND,
         # -------------------------------------------------------------
         # Gain – Deck A
         # -------------------------------------------------------------

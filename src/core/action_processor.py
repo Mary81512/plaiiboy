@@ -19,6 +19,9 @@ ActionHandler = Callable[
 class ActionProcessor:
     MIXER_DEADZONE = 0.20
 
+    TOUCHPAD_WIDTH = 1920
+    TOUCHPAD_HEIGHT = 942
+
     # Änderung pro Sekunde bei vollem Stickausschlag.
     VOLUME_SPEED = 0.60
     EQ_SPEED = 0.60
@@ -40,9 +43,12 @@ class ActionProcessor:
         ] = {
             Action.TOGGLE_ACTIVE_DECK: self._toggle_active_deck,
             Action.CYCLE_SEEK_SPEED: self._cycle_seek_speed,
-            # Layer 2
-            Action.CYCLE_DECK_1_EQ_BAND: self._cycle_deck_1_eq_band,
-            Action.CYCLE_DECK_2_EQ_BAND: self._cycle_deck_2_eq_band,
+            Action.DECK_1_EQ_BAND_UP: self._deck_1_eq_band_up,
+            Action.DECK_1_EQ_BAND_DOWN: self._deck_1_eq_band_down,
+            Action.DECK_2_EQ_BAND_UP: self._deck_2_eq_band_up,
+            Action.DECK_2_EQ_BAND_DOWN: self._deck_2_eq_band_down,
+            Action.TOGGLE_DECK_1_EQ_BAND: self._toggle_deck_1_eq_band,
+            Action.TOGGLE_DECK_2_EQ_BAND: self._toggle_deck_2_eq_band,
             # Seek
             Action.ACTIVE_DECK_SEEK_BACKWARD: self._seek_backward,
             Action.ACTIVE_DECK_SEEK_FORWARD: self._seek_forward,
@@ -125,23 +131,91 @@ class ActionProcessor:
 
         events: list[ActionEvent] = []
 
-        events.extend(
-            self._process_deck_stick(
-                deck=Deck.DECK_1,
-                x=left_x,
-                y=left_y,
-                delta_time=delta_time,
-            )
-        )
+        # Layer 2:
+        # Die Stick-X-Achsen steuern weiterhin den ausgewählten EQ.
+        # Stick-Y bleibt ab jetzt frei für die spätere 4-Band-Auswahl.
 
-        events.extend(
-            self._process_deck_stick(
-                deck=Deck.DECK_2,
-                x=right_x,
-                y=right_y,
-                delta_time=delta_time,
+        if abs(left_x) >= self.MIXER_DEADZONE:
+            events.extend(
+                self._process_eq_axis(
+                    deck=Deck.DECK_1,
+                    value=left_x,
+                    delta_time=delta_time,
+                )
             )
-        )
+
+        if abs(right_x) >= self.MIXER_DEADZONE:
+            events.extend(
+                self._process_eq_axis(
+                    deck=Deck.DECK_2,
+                    value=right_x,
+                    delta_time=delta_time,
+                )
+            )
+
+        return events
+
+    def process_touchpad_volumes(
+        self,
+        touches,
+    ) -> list[ActionEvent]:
+        """
+        Layer 2:
+        Linke Touchpad-Hälfte  -> Deck A Volume
+        Rechte Touchpad-Hälfte -> Deck B Volume
+
+        Y-Position ist absolut:
+        oben  = 1.0
+        unten = 0.0
+
+        Zwei Finger können gleichzeitig beide Decks steuern.
+        """
+
+        events: list[ActionEvent] = []
+
+        if not touches:
+            return events
+
+        half_width = self.TOUCHPAD_WIDTH / 2
+
+        for touch in touches.values():
+            normalized_y = 1.0 - (touch.y / (self.TOUCHPAD_HEIGHT - 1))
+
+            volume = self._clamp(normalized_y)
+
+            if touch.x < half_width:
+                old_value = self._state.deck_1_volume
+
+                if abs(volume - old_value) < 0.002:
+                    continue
+
+                self._state.deck_1_volume = volume
+
+                events.append(
+                    self._create_axis_action(
+                        action=Action.DECK_1_VOLUME,
+                        axis=Axis.LEFT_Y,
+                        action_value=volume,
+                        stick_value=volume,
+                    )
+                )
+
+            else:
+                old_value = self._state.deck_2_volume
+
+                if abs(volume - old_value) < 0.002:
+                    continue
+
+                self._state.deck_2_volume = volume
+
+                events.append(
+                    self._create_axis_action(
+                        action=Action.DECK_2_VOLUME,
+                        axis=Axis.RIGHT_Y,
+                        action_value=volume,
+                        stick_value=volume,
+                    )
+                )
 
         return events
 
@@ -334,11 +408,17 @@ class ActionProcessor:
                 self._state.deck_1_eq_high = new_value
                 action = Action.DECK_1_EQ_HIGH
 
-            elif band is EQBand.MID:
-                old_value = self._state.deck_1_eq_mid
+            elif band is EQBand.MID_HIGH:
+                old_value = self._state.deck_1_eq_mid_high
                 new_value = self._clamp(old_value + delta)
-                self._state.deck_1_eq_mid = new_value
-                action = Action.DECK_1_EQ_MID
+                self._state.deck_1_eq_mid_high = new_value
+                action = Action.DECK_1_EQ_MID_HIGH
+
+            elif band is EQBand.MID_LOW:
+                old_value = self._state.deck_1_eq_mid_low
+                new_value = self._clamp(old_value + delta)
+                self._state.deck_1_eq_mid_low = new_value
+                action = Action.DECK_1_EQ_MID_LOW
 
             else:
                 old_value = self._state.deck_1_eq_low
@@ -356,11 +436,17 @@ class ActionProcessor:
                 self._state.deck_2_eq_high = new_value
                 action = Action.DECK_2_EQ_HIGH
 
-            elif band is EQBand.MID:
-                old_value = self._state.deck_2_eq_mid
+            elif band is EQBand.MID_HIGH:
+                old_value = self._state.deck_2_eq_mid_high
                 new_value = self._clamp(old_value + delta)
-                self._state.deck_2_eq_mid = new_value
-                action = Action.DECK_2_EQ_MID
+                self._state.deck_2_eq_mid_high = new_value
+                action = Action.DECK_2_EQ_MID_HIGH
+
+            elif band is EQBand.MID_LOW:
+                old_value = self._state.deck_2_eq_mid_low
+                new_value = self._clamp(old_value + delta)
+                self._state.deck_2_eq_mid_low = new_value
+                action = Action.DECK_2_EQ_MID_LOW
 
             else:
                 old_value = self._state.deck_2_eq_low
@@ -384,25 +470,73 @@ class ActionProcessor:
     # Layer 2 – EQ-Band auswählen
     # -------------------------------------------------------------------------
 
-    def _cycle_deck_1_eq_band(
+    def _deck_1_eq_band_up(
         self,
         event: ActionEvent,
     ) -> list[ActionEvent]:
-        band = self._state.cycle_deck_1_eq_band()
-
+        band = self._state.move_deck_1_eq_band(-1)
         print(f"Deck 1 EQ-Band: {band.label}")
-
         return []
 
-    def _cycle_deck_2_eq_band(
+    def _deck_1_eq_band_down(
         self,
         event: ActionEvent,
     ) -> list[ActionEvent]:
-        band = self._state.cycle_deck_2_eq_band()
-
-        print(f"Deck 2 EQ-Band: {band.label}")
-
+        band = self._state.move_deck_1_eq_band(1)
+        print(f"Deck 1 EQ-Band: {band.label}")
         return []
+
+    def _deck_2_eq_band_up(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        band = self._state.move_deck_2_eq_band(-1)
+        print(f"Deck 2 EQ-Band: {band.label}")
+        return []
+
+    def _deck_2_eq_band_down(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        band = self._state.move_deck_2_eq_band(1)
+        print(f"Deck 2 EQ-Band: {band.label}")
+        return []
+
+    def _toggle_deck_1_eq_band(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        mappings = {
+            EQBand.HIGH: Action.DECK_1_EQ_HIGH_TOGGLE,
+            EQBand.MID_HIGH: Action.DECK_1_EQ_MID_HIGH_TOGGLE,
+            EQBand.MID_LOW: Action.DECK_1_EQ_MID_LOW_TOGGLE,
+            EQBand.LOW: Action.DECK_1_EQ_LOW_TOGGLE,
+        }
+
+        return [
+            self._replace_action(
+                event=event,
+                action=mappings[self._state.deck_1_eq_band],
+            )
+        ]
+
+    def _toggle_deck_2_eq_band(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        mappings = {
+            EQBand.HIGH: Action.DECK_2_EQ_HIGH_TOGGLE,
+            EQBand.MID_HIGH: Action.DECK_2_EQ_MID_HIGH_TOGGLE,
+            EQBand.MID_LOW: Action.DECK_2_EQ_MID_LOW_TOGGLE,
+            EQBand.LOW: Action.DECK_2_EQ_LOW_TOGGLE,
+        }
+
+        return [
+            self._replace_action(
+                event=event,
+                action=mappings[self._state.deck_2_eq_band],
+            )
+        ]
 
     # -------------------------------------------------------------------------
     # Active Deck

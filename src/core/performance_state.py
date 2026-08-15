@@ -9,14 +9,16 @@ class Deck(Enum):
 
 class EQBand(Enum):
     HIGH = 1
-    MID = 2
-    LOW = 3
+    MID_HIGH = 2
+    MID_LOW = 3
+    LOW = 4
 
     @property
     def label(self) -> str:
         labels = {
             EQBand.HIGH: "High",
-            EQBand.MID: "Mid",
+            EQBand.MID_HIGH: "Mid High",
+            EQBand.MID_LOW: "Mid Low",
             EQBand.LOW: "Low",
         }
 
@@ -58,11 +60,13 @@ class PerformanceState:
     deck_2_volume: float = 0.5
 
     deck_1_eq_high: float = 0.5
-    deck_1_eq_mid: float = 0.5
+    deck_1_eq_mid_high: float = 0.5
+    deck_1_eq_mid_low: float = 0.5
     deck_1_eq_low: float = 0.5
 
     deck_2_eq_high: float = 0.5
-    deck_2_eq_mid: float = 0.5
+    deck_2_eq_mid_high: float = 0.5
+    deck_2_eq_mid_low: float = 0.5
     deck_2_eq_low: float = 0.5
 
     mixer_fx_a_amount: float = 0.5
@@ -95,22 +99,34 @@ class PerformanceState:
         self.browser_focus = focus
         return self.browser_focus
 
-    def cycle_deck_1_eq_band(self) -> EQBand:
+    def move_deck_1_eq_band(self, direction: int) -> EQBand:
         bands = list(EQBand)
         current_index = bands.index(self.deck_1_eq_band)
-        next_index = (current_index + 1) % len(bands)
 
-        self.deck_1_eq_band = bands[next_index]
+        new_index = max(
+            0,
+            min(
+                len(bands) - 1,
+                current_index + direction,
+            ),
+        )
 
+        self.deck_1_eq_band = bands[new_index]
         return self.deck_1_eq_band
 
-    def cycle_deck_2_eq_band(self) -> EQBand:
+    def move_deck_2_eq_band(self, direction: int) -> EQBand:
         bands = list(EQBand)
         current_index = bands.index(self.deck_2_eq_band)
-        next_index = (current_index + 1) % len(bands)
 
-        self.deck_2_eq_band = bands[next_index]
+        new_index = max(
+            0,
+            min(
+                len(bands) - 1,
+                current_index + direction,
+            ),
+        )
 
+        self.deck_2_eq_band = bands[new_index]
         return self.deck_2_eq_band
 
     def toggle_mixer_fx_a_direction(self) -> float:
