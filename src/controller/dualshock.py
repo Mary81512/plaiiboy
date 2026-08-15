@@ -21,6 +21,8 @@ from core.events import Axis, Button
 
 
 class DualShock4:
+    KEEP_ALIVE_INTERVAL = 30.0
+
     def __init__(self) -> None:
         self._device: hid.device | None = None
 
@@ -30,6 +32,8 @@ class DualShock4:
 
         self._small_motor = 0
         self._large_motor = 0
+
+        self._last_output_report_at = 0.0
 
     @property
     def connected(self) -> bool:
@@ -75,6 +79,8 @@ class DualShock4:
         if self._device is None:
             raise RuntimeError("Controller ist nicht verbunden.")
 
+        self._send_keep_alive_if_needed()
+
         try:
             report = self._device.read(BLUETOOTH_REPORT_SIZE)
         except OSError as error:
@@ -100,6 +106,14 @@ class DualShock4:
             return self._decode_minimal_state(report)
 
         return None
+
+    def _send_keep_alive_if_needed(self) -> None:
+        now = time.monotonic()
+
+        if now - self._last_output_report_at < self.KEEP_ALIVE_INTERVAL:
+            return
+
+        self._write_output_report()
 
     def _enable_full_bluetooth_reports(self) -> None:
         self._write_output_report()
@@ -219,6 +233,7 @@ class DualShock4:
             raise RuntimeError(
                 "Der Controller hat den Bluetooth-Output-Report nicht angenommen."
             )
+        self._last_output_report_at = time.monotonic()
 
     def _clamp_byte(
         self,

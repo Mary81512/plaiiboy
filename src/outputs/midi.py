@@ -58,6 +58,7 @@ MIDI_MAPPINGS: dict[Action, MidiMapping] = {
     ),
     Action.DECK_1_LOOP_TOGGLE: MidiNoteMapping(
         note=42,
+        mode=MidiNoteMode.GATE,
     ),
     Action.DECK_1_BPM_INCREASE: MidiNoteMapping(
         note=43,
@@ -98,6 +99,7 @@ MIDI_MAPPINGS: dict[Action, MidiMapping] = {
     ),
     Action.DECK_2_LOOP_TOGGLE: MidiNoteMapping(
         note=54,
+        mode=MidiNoteMode.GATE,
     ),
     Action.DECK_2_BPM_INCREASE: MidiNoteMapping(
         note=55,
@@ -227,6 +229,48 @@ MIDI_MAPPINGS: dict[Action, MidiMapping] = {
     ),
     Action.DECK_2_EQ_LOW: MidiControlChangeMapping(
         control=27,
+    ),
+    # ---------------------------------------------------------------------
+    # Layer 2 – Mixer FX Deck A
+    # ---------------------------------------------------------------------
+    Action.MIXER_FX_A_AMOUNT_DECREASE: MidiNoteMapping(
+        note=82,
+    ),
+    Action.MIXER_FX_A_AMOUNT_INCREASE: MidiNoteMapping(
+        note=83,
+    ),
+    Action.MIXER_FX_A_PREVIOUS: MidiNoteMapping(
+        note=84,
+    ),
+    Action.MIXER_FX_A_NEXT: MidiNoteMapping(
+        note=85,
+    ),
+    Action.MIXER_FX_A_LOAD: MidiNoteMapping(
+        note=86,
+    ),
+    Action.MIXER_FX_A_TOGGLE: MidiNoteMapping(
+        note=87,
+    ),
+    # ---------------------------------------------------------------------
+    # Layer 2 – Mixer FX Deck B
+    # ---------------------------------------------------------------------
+    Action.MIXER_FX_B_AMOUNT_DECREASE: MidiNoteMapping(
+        note=88,
+    ),
+    Action.MIXER_FX_B_AMOUNT_INCREASE: MidiNoteMapping(
+        note=89,
+    ),
+    Action.MIXER_FX_B_PREVIOUS: MidiNoteMapping(
+        note=90,
+    ),
+    Action.MIXER_FX_B_NEXT: MidiNoteMapping(
+        note=91,
+    ),
+    Action.MIXER_FX_B_LOAD: MidiNoteMapping(
+        note=92,
+    ),
+    Action.MIXER_FX_B_TOGGLE: MidiNoteMapping(
+        note=93,
     ),
 }
 

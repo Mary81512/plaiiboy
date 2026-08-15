@@ -42,6 +42,10 @@ CONTROLLER_MAPPINGS: dict[
             Button.L3,
             EventType.BUTTON_PRESSED,
         ): Action.DECK_1_LOOP_TOGGLE,
+        (
+            Button.L3,
+            EventType.BUTTON_RELEASED,
+        ): Action.DECK_1_LOOP_TOGGLE,
         # Deck 2
         (
             Button.R1,
@@ -66,6 +70,10 @@ CONTROLLER_MAPPINGS: dict[
         (
             Button.R3,
             EventType.BUTTON_PRESSED,
+        ): Action.DECK_2_LOOP_TOGGLE,
+        (
+            Button.R3,
+            EventType.BUTTON_RELEASED,
         ): Action.DECK_2_LOOP_TOGGLE,
         # Browser
         (
@@ -151,6 +159,9 @@ CONTROLLER_MAPPINGS: dict[
         ): Action.DECK_2_BPM_DECREASE,
     },
     Layer.LAYER_2: {
+        # -------------------------------------------------------------
+        # EQ-Band Auswahl
+        # -------------------------------------------------------------
         (
             Button.L3,
             EventType.BUTTON_PRESSED,
@@ -159,6 +170,70 @@ CONTROLLER_MAPPINGS: dict[
             Button.R3,
             EventType.BUTTON_PRESSED,
         ): Action.CYCLE_DECK_2_EQ_BAND,
+        # -------------------------------------------------------------
+        # Mixer FX – Deck A
+        #
+        # D-Pad links / rechts = Amount - / +
+        # D-Pad oben / unten   = Effekt vorher / nachher
+        # SHARE                = Effekt laden
+        # L1                   = Mixer FX an / aus
+        # -------------------------------------------------------------
+        (
+            Button.DPAD_LEFT,
+            EventType.BUTTON_PRESSED,
+        ): Action.MIXER_FX_A_AMOUNT_DECREASE,
+        (
+            Button.DPAD_RIGHT,
+            EventType.BUTTON_PRESSED,
+        ): Action.MIXER_FX_A_AMOUNT_INCREASE,
+        (
+            Button.DPAD_UP,
+            EventType.BUTTON_PRESSED,
+        ): Action.MIXER_FX_A_PREVIOUS,
+        (
+            Button.DPAD_DOWN,
+            EventType.BUTTON_PRESSED,
+        ): Action.MIXER_FX_A_NEXT,
+        (
+            Button.SHARE,
+            EventType.BUTTON_PRESSED,
+        ): Action.MIXER_FX_A_LOAD,
+        (
+            Button.L1,
+            EventType.BUTTON_PRESSED,
+        ): Action.MIXER_FX_A_TOGGLE,
+        # -------------------------------------------------------------
+        # Mixer FX – Deck B
+        #
+        # Square / Circle    = Amount - / +
+        # Triangle / Cross   = Effekt vorher / nachher
+        # OPTIONS            = Effekt laden
+        # R1                 = Mixer FX an / aus
+        # -------------------------------------------------------------
+        (
+            Button.SQUARE,
+            EventType.BUTTON_PRESSED,
+        ): Action.MIXER_FX_B_AMOUNT_DECREASE,
+        (
+            Button.CIRCLE,
+            EventType.BUTTON_PRESSED,
+        ): Action.MIXER_FX_B_AMOUNT_INCREASE,
+        (
+            Button.TRIANGLE,
+            EventType.BUTTON_PRESSED,
+        ): Action.MIXER_FX_B_PREVIOUS,
+        (
+            Button.CROSS,
+            EventType.BUTTON_PRESSED,
+        ): Action.MIXER_FX_B_NEXT,
+        (
+            Button.OPTIONS,
+            EventType.BUTTON_PRESSED,
+        ): Action.MIXER_FX_B_LOAD,
+        (
+            Button.R1,
+            EventType.BUTTON_PRESSED,
+        ): Action.MIXER_FX_B_TOGGLE,
     },
 }
 
