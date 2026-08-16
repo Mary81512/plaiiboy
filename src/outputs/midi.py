@@ -284,12 +284,6 @@ MIDI_MAPPINGS: dict[Action, MidiMapping] = {
     Action.MIXER_FX_B_TOGGLE: MidiNoteMapping(
         note=93,
     ),
-    Action.MIXER_FX_A_AMOUNT: MidiControlChangeMapping(
-        control=28,
-    ),
-    Action.MIXER_FX_B_AMOUNT: MidiControlChangeMapping(
-        control=29,
-    ),
     # ---------------------------------------------------------------------
     # Layer 2 – Gain
     # ---------------------------------------------------------------------
