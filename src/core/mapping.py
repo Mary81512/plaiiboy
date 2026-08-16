@@ -235,11 +235,11 @@ CONTROLLER_MAPPINGS: dict[
         (
             Button.SHARE,
             EventType.BUTTON_PRESSED,
-        ): Action.TOGGLE_MIXER_FX_A_DIRECTION,
+        ): Action.MIXER_FX_A_TOGGLE,
         (
             Button.L1,
             EventType.BUTTON_PRESSED,
-        ): Action.MIXER_FX_A_TOGGLE,
+        ): Action.SELECT_MIXER_FX_DECK_A,
         # -------------------------------------------------------------
         # Mixer FX – Deck B
         #
@@ -259,11 +259,11 @@ CONTROLLER_MAPPINGS: dict[
         (
             Button.OPTIONS,
             EventType.BUTTON_PRESSED,
-        ): Action.TOGGLE_MIXER_FX_B_DIRECTION,
+        ): Action.MIXER_FX_B_TOGGLE,
         (
             Button.R1,
             EventType.BUTTON_PRESSED,
-        ): Action.MIXER_FX_B_TOGGLE,
+        ): Action.SELECT_MIXER_FX_DECK_B,
     },
 }
 

@@ -57,8 +57,8 @@ class ActionProcessor:
             Action.BROWSER_DOWN: self._browser_down,
             Action.BROWSER_LEVEL_UP: self._browser_level_up,
             Action.BROWSER_LEVEL_DOWN: self._browser_level_down,
-            Action.TOGGLE_MIXER_FX_A_DIRECTION: (self._toggle_mixer_fx_a_direction),
-            Action.TOGGLE_MIXER_FX_B_DIRECTION: (self._toggle_mixer_fx_b_direction),
+            Action.SELECT_MIXER_FX_DECK_A: (self._select_mixer_fx_deck_a),
+            Action.SELECT_MIXER_FX_DECK_B: (self._select_mixer_fx_deck_b),
         }
 
     @property
@@ -238,68 +238,76 @@ class ActionProcessor:
 
         events: list[ActionEvent] = []
 
-        if l2 > 0.02:
-            delta = (
-                l2 * self.MIXER_FX_SPEED * delta_time * self._state.mixer_fx_a_direction
-            )
+        # L2 = runter
+        # R2 = hoch
+        #
+        # Wenn beide gleichzeitig gedrückt werden,
+        # heben sie sich gegenseitig auf.
+        trigger_delta = (r2 - l2) * self.MIXER_FX_SPEED * delta_time
 
+        if abs(trigger_delta) < 0.000001:
+            return events
+
+        selected_deck = self._state.selected_mixer_fx_deck
+
+        if selected_deck is Deck.DECK_1:
             old_value = self._state.mixer_fx_a_amount
-            new_value = self._clamp(old_value + delta)
+            new_value = self._clamp(old_value + trigger_delta)
 
-            if new_value != old_value:
-                self._state.mixer_fx_a_amount = new_value
+            if new_value == old_value:
+                return events
 
-                events.append(
-                    self._create_axis_action(
-                        action=Action.MIXER_FX_A_AMOUNT,
-                        axis=Axis.L2,
-                        action_value=new_value,
-                        stick_value=l2,
-                    )
+            self._state.mixer_fx_a_amount = new_value
+
+            events.append(
+                self._create_axis_action(
+                    action=Action.MIXER_FX_A_AMOUNT,
+                    axis=(Axis.R2 if trigger_delta > 0 else Axis.L2),
+                    action_value=new_value,
+                    stick_value=abs(r2 if trigger_delta > 0 else l2),
                 )
-
-        if r2 > 0.02:
-            delta = (
-                r2 * self.MIXER_FX_SPEED * delta_time * self._state.mixer_fx_b_direction
             )
 
+        else:
             old_value = self._state.mixer_fx_b_amount
-            new_value = self._clamp(old_value + delta)
+            new_value = self._clamp(old_value + trigger_delta)
 
-            if new_value != old_value:
-                self._state.mixer_fx_b_amount = new_value
+            if new_value == old_value:
+                return events
 
-                events.append(
-                    self._create_axis_action(
-                        action=Action.MIXER_FX_B_AMOUNT,
-                        axis=Axis.R2,
-                        action_value=new_value,
-                        stick_value=r2,
-                    )
+            self._state.mixer_fx_b_amount = new_value
+
+            events.append(
+                self._create_axis_action(
+                    action=Action.MIXER_FX_B_AMOUNT,
+                    axis=(Axis.R2 if trigger_delta > 0 else Axis.L2),
+                    action_value=new_value,
+                    stick_value=abs(r2 if trigger_delta > 0 else l2),
                 )
+            )
 
         return events
 
-    def _toggle_mixer_fx_a_direction(
+    def _select_mixer_fx_deck_a(
         self,
         event: ActionEvent,
     ) -> list[ActionEvent]:
-        direction = self._state.toggle_mixer_fx_a_direction()
+        self._state.select_mixer_fx_deck(
+            Deck.DECK_1,
+        )
 
-        label = "hoch" if direction > 0 else "runter"
-        print(f"Mixer FX A Richtung: {label}")
-
+        print("Mixer FX Steuerung: Deck A")
         return []
 
-    def _toggle_mixer_fx_b_direction(
+    def _select_mixer_fx_deck_b(
         self,
         event: ActionEvent,
     ) -> list[ActionEvent]:
-        direction = self._state.toggle_mixer_fx_b_direction()
+        self._state.select_mixer_fx_deck(
+            Deck.DECK_2,
+        )
 
-        label = "hoch" if direction > 0 else "runter"
-        print(f"Mixer FX B Richtung: {label}")
-
+        print("Mixer FX Steuerung: Deck B")
         return []
 
     def _process_deck_stick(
