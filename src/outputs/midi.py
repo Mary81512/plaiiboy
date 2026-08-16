@@ -28,6 +28,7 @@ class MidiControlChangeMapping:
     control: int
     channel: int = 0
     bipolar: bool = False
+    relative: bool = False
 
 
 MidiMapping = MidiNoteMapping | MidiControlChangeMapping
@@ -202,45 +203,51 @@ MIDI_MAPPINGS: dict[Action, MidiMapping] = {
     # ---------------------------------------------------------------------
     Action.DECK_1_VOLUME: MidiControlChangeMapping(
         control=20,
+        relative=True,
     ),
     Action.DECK_2_VOLUME: MidiControlChangeMapping(
         control=21,
+        relative=True,
     ),
-    # ---------------------------------------------------------------------
-    # Layer 2 – Deck 1 EQ
-    # ---------------------------------------------------------------------
-    # Deck A – 4 Band EQ
     Action.DECK_1_EQ_HIGH: MidiControlChangeMapping(
         control=22,
+        relative=True,
     ),
     Action.DECK_1_EQ_MID_HIGH: MidiControlChangeMapping(
         control=23,
+        relative=True,
     ),
     Action.DECK_1_EQ_MID_LOW: MidiControlChangeMapping(
         control=24,
+        relative=True,
     ),
     Action.DECK_1_EQ_LOW: MidiControlChangeMapping(
         control=25,
+        relative=True,
     ),
-    # Deck B – 4 Band EQ
     Action.DECK_2_EQ_HIGH: MidiControlChangeMapping(
         control=26,
+        relative=True,
     ),
     Action.DECK_2_EQ_MID_HIGH: MidiControlChangeMapping(
         control=27,
+        relative=True,
     ),
     Action.DECK_2_EQ_MID_LOW: MidiControlChangeMapping(
         control=28,
+        relative=True,
     ),
     Action.DECK_2_EQ_LOW: MidiControlChangeMapping(
         control=29,
+        relative=True,
     ),
-    # Mixer FX Amount
     Action.MIXER_FX_A_AMOUNT: MidiControlChangeMapping(
         control=30,
+        relative=True,
     ),
     Action.MIXER_FX_B_AMOUNT: MidiControlChangeMapping(
         control=31,
+        relative=True,
     ),
     # ---------------------------------------------------------------------
     # Layer 2 – Mixer FX Deck A
@@ -477,10 +484,15 @@ class MidiOutput(Output):
         event: ActionEvent,
         mapping: MidiControlChangeMapping,
     ) -> None:
-        midi_value = self._to_midi_value(
-            event.value,
-            bipolar=mapping.bipolar,
-        )
+        if mapping.relative:
+            midi_value = self._to_relative_midi_value(
+                event.value,
+            )
+        else:
+            midi_value = self._to_midi_value(
+                event.value,
+                bipolar=mapping.bipolar,
+            )
 
         message = mido.Message(  # type: ignore[attr-defined]
             "control_change",
@@ -515,6 +527,33 @@ class MidiOutput(Output):
         """
 
         print(f"[MIDI OUT] {message}")
+
+    def _to_relative_midi_value(
+        self,
+        value: float,
+    ) -> int:
+        """
+        Relative MIDI-Kodierung 7Fh/01h.
+
+        positiv:
+            1 ... 63
+
+        negativ:
+            127 ... 65
+        """
+
+        magnitude = max(
+            1,
+            min(
+                63,
+                round(abs(value) * 63),
+            ),
+        )
+
+        if value > 0:
+            return magnitude
+
+        return 128 - magnitude
 
     def _to_midi_value(
         self,

@@ -36,6 +36,9 @@ class ActionProcessor:
         state: PerformanceState | None = None,
     ) -> None:
         self._state = state if state is not None else PerformanceState()
+        # Letzte Touchpad-Position pro Finger.
+        # Damit wird das Touchpad relativ wie ein Scroll-Fader benutzt.
+        self._touchpad_previous: dict[int, tuple[Deck, int]] = {}
 
         self._handlers: dict[
             Action,
@@ -160,62 +163,75 @@ class ActionProcessor:
         touches,
     ) -> list[ActionEvent]:
         """
-        Layer 2:
-        Linke Touchpad-Hälfte  -> Deck A Volume
-        Rechte Touchpad-Hälfte -> Deck B Volume
+        Layer 2 – relative Touchpad-Fader.
 
-        Y-Position ist absolut:
-        oben  = 1.0
-        unten = 0.0
+        Linke Hälfte  -> Deck A Volume
+        Rechte Hälfte -> Deck B Volume
 
-        Zwei Finger können gleichzeitig beide Decks steuern.
+        Aufsetzen verändert nichts.
+        Erst die Bewegung des Fingers erzeugt relative MIDI-Schritte.
         """
 
         events: list[ActionEvent] = []
 
-        if not touches:
-            return events
+        active_finger_ids = set(touches.keys())
+
+        # Finger, die nicht mehr auf dem Touchpad liegen, vergessen.
+        for finger_id in list(self._touchpad_previous):
+            if finger_id not in active_finger_ids:
+                del self._touchpad_previous[finger_id]
 
         half_width = self.TOUCHPAD_WIDTH / 2
 
-        for touch in touches.values():
-            normalized_y = 1.0 - (touch.y / (self.TOUCHPAD_HEIGHT - 1))
+        for finger_id, touch in touches.items():
+            deck = Deck.DECK_1 if touch.x < half_width else Deck.DECK_2
 
-            volume = self._clamp(normalized_y)
+            previous = self._touchpad_previous.get(finger_id)
 
-            if touch.x < half_width:
-                old_value = self._state.deck_1_volume
+            # Aktuelle Position immer für den nächsten Frame speichern.
+            self._touchpad_previous[finger_id] = (
+                deck,
+                touch.y,
+            )
 
-                if abs(volume - old_value) < 0.002:
-                    continue
+            # Neu aufgesetzter Finger:
+            # noch KEINE Lautstärkeänderung.
+            if previous is None:
+                continue
 
-                self._state.deck_1_volume = volume
+            previous_deck, previous_y = previous
 
-                events.append(
-                    self._create_axis_action(
-                        action=Action.DECK_1_VOLUME,
-                        axis=Axis.LEFT_Y,
-                        action_value=volume,
-                        stick_value=volume,
-                    )
-                )
+            # Wenn der Finger über die Mitte auf das andere Deck
+            # gewechselt ist, dort ebenfalls erst neu "ansetzen".
+            if previous_deck is not deck:
+                continue
 
+            delta_y = touch.y - previous_y
+
+            # Sehr kleine Sensorbewegungen ignorieren.
+            if abs(delta_y) < 2:
+                continue
+
+            # Touchpad:
+            # nach oben   -> positiver Wert -> Volume höher
+            # nach unten  -> negativer Wert -> Volume niedriger
+            relative_value = -(delta_y / self.TOUCHPAD_HEIGHT)
+
+            if deck is Deck.DECK_1:
+                action = Action.DECK_1_VOLUME
+                axis = Axis.LEFT_Y
             else:
-                old_value = self._state.deck_2_volume
+                action = Action.DECK_2_VOLUME
+                axis = Axis.RIGHT_Y
 
-                if abs(volume - old_value) < 0.002:
-                    continue
-
-                self._state.deck_2_volume = volume
-
-                events.append(
-                    self._create_axis_action(
-                        action=Action.DECK_2_VOLUME,
-                        axis=Axis.RIGHT_Y,
-                        action_value=volume,
-                        stick_value=volume,
-                    )
+            events.append(
+                self._create_axis_action(
+                    action=action,
+                    axis=axis,
+                    action_value=relative_value,
+                    stick_value=relative_value,
                 )
+            )
 
         return events
 
@@ -236,57 +252,30 @@ class ActionProcessor:
         if delta_time == 0.0:
             return []
 
-        events: list[ActionEvent] = []
+        # L2 = weniger
+        # R2 = mehr
+        relative_value = (r2 - l2) * self.MIXER_FX_SPEED * delta_time
 
-        # L2 = runter
-        # R2 = hoch
-        #
-        # Wenn beide gleichzeitig gedrückt werden,
-        # heben sie sich gegenseitig auf.
-        trigger_delta = (r2 - l2) * self.MIXER_FX_SPEED * delta_time
-
-        if abs(trigger_delta) < 0.000001:
-            return events
+        if abs(relative_value) < 0.000001:
+            return []
 
         selected_deck = self._state.selected_mixer_fx_deck
 
         if selected_deck is Deck.DECK_1:
-            old_value = self._state.mixer_fx_a_amount
-            new_value = self._clamp(old_value + trigger_delta)
-
-            if new_value == old_value:
-                return events
-
-            self._state.mixer_fx_a_amount = new_value
-
-            events.append(
-                self._create_axis_action(
-                    action=Action.MIXER_FX_A_AMOUNT,
-                    axis=(Axis.R2 if trigger_delta > 0 else Axis.L2),
-                    action_value=new_value,
-                    stick_value=abs(r2 if trigger_delta > 0 else l2),
-                )
-            )
-
+            action = Action.MIXER_FX_A_AMOUNT
         else:
-            old_value = self._state.mixer_fx_b_amount
-            new_value = self._clamp(old_value + trigger_delta)
+            action = Action.MIXER_FX_B_AMOUNT
 
-            if new_value == old_value:
-                return events
+        axis = Axis.R2 if relative_value > 0 else Axis.L2
 
-            self._state.mixer_fx_b_amount = new_value
-
-            events.append(
-                self._create_axis_action(
-                    action=Action.MIXER_FX_B_AMOUNT,
-                    axis=(Axis.R2 if trigger_delta > 0 else Axis.L2),
-                    action_value=new_value,
-                    stick_value=abs(r2 if trigger_delta > 0 else l2),
-                )
+        return [
+            self._create_axis_action(
+                action=action,
+                axis=axis,
+                action_value=relative_value,
+                stick_value=abs(r2 - l2),
             )
-
-        return events
+        ]
 
     def _select_mixer_fx_deck_a(
         self,
@@ -404,72 +393,38 @@ class ActionProcessor:
     ) -> list[ActionEvent]:
         # links  -> kleiner
         # rechts -> größer
-        delta = value * self.EQ_SPEED * delta_time
+        relative_value = value * self.EQ_SPEED * delta_time
+
+        if abs(relative_value) < 0.000001:
+            return []
 
         if deck is Deck.DECK_1:
             band = self._state.deck_1_eq_band
             axis = Axis.LEFT_X
 
-            if band is EQBand.HIGH:
-                old_value = self._state.deck_1_eq_high
-                new_value = self._clamp(old_value + delta)
-                self._state.deck_1_eq_high = new_value
-                action = Action.DECK_1_EQ_HIGH
-
-            elif band is EQBand.MID_HIGH:
-                old_value = self._state.deck_1_eq_mid_high
-                new_value = self._clamp(old_value + delta)
-                self._state.deck_1_eq_mid_high = new_value
-                action = Action.DECK_1_EQ_MID_HIGH
-
-            elif band is EQBand.MID_LOW:
-                old_value = self._state.deck_1_eq_mid_low
-                new_value = self._clamp(old_value + delta)
-                self._state.deck_1_eq_mid_low = new_value
-                action = Action.DECK_1_EQ_MID_LOW
-
-            else:
-                old_value = self._state.deck_1_eq_low
-                new_value = self._clamp(old_value + delta)
-                self._state.deck_1_eq_low = new_value
-                action = Action.DECK_1_EQ_LOW
+            mappings = {
+                EQBand.HIGH: Action.DECK_1_EQ_HIGH,
+                EQBand.MID_HIGH: Action.DECK_1_EQ_MID_HIGH,
+                EQBand.MID_LOW: Action.DECK_1_EQ_MID_LOW,
+                EQBand.LOW: Action.DECK_1_EQ_LOW,
+            }
 
         else:
             band = self._state.deck_2_eq_band
             axis = Axis.RIGHT_X
 
-            if band is EQBand.HIGH:
-                old_value = self._state.deck_2_eq_high
-                new_value = self._clamp(old_value + delta)
-                self._state.deck_2_eq_high = new_value
-                action = Action.DECK_2_EQ_HIGH
-
-            elif band is EQBand.MID_HIGH:
-                old_value = self._state.deck_2_eq_mid_high
-                new_value = self._clamp(old_value + delta)
-                self._state.deck_2_eq_mid_high = new_value
-                action = Action.DECK_2_EQ_MID_HIGH
-
-            elif band is EQBand.MID_LOW:
-                old_value = self._state.deck_2_eq_mid_low
-                new_value = self._clamp(old_value + delta)
-                self._state.deck_2_eq_mid_low = new_value
-                action = Action.DECK_2_EQ_MID_LOW
-
-            else:
-                old_value = self._state.deck_2_eq_low
-                new_value = self._clamp(old_value + delta)
-                self._state.deck_2_eq_low = new_value
-                action = Action.DECK_2_EQ_LOW
-
-        if new_value == old_value:
-            return []
+            mappings = {
+                EQBand.HIGH: Action.DECK_2_EQ_HIGH,
+                EQBand.MID_HIGH: Action.DECK_2_EQ_MID_HIGH,
+                EQBand.MID_LOW: Action.DECK_2_EQ_MID_LOW,
+                EQBand.LOW: Action.DECK_2_EQ_LOW,
+            }
 
         return [
             self._create_axis_action(
-                action=action,
+                action=mappings[band],
                 axis=axis,
-                action_value=new_value,
+                action_value=relative_value,
                 stick_value=value,
             )
         ]
