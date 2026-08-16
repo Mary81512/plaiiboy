@@ -265,6 +265,72 @@ CONTROLLER_MAPPINGS: dict[
             EventType.BUTTON_PRESSED,
         ): Action.SELECT_MIXER_FX_DECK_B,
     },
+    Layer.LAYER_3: {
+        # -------------------------------------------------------------
+        # FX Unit auswählen
+        # -------------------------------------------------------------
+        (
+            Button.L1,
+            EventType.BUTTON_PRESSED,
+        ): Action.SELECT_FX_UNIT_1,
+        (
+            Button.R1,
+            EventType.BUTTON_PRESSED,
+        ): Action.SELECT_FX_UNIT_2,
+        # -------------------------------------------------------------
+        # FX Unit On / Off
+        # -------------------------------------------------------------
+        (
+            Button.SHARE,
+            EventType.BUTTON_PRESSED,
+        ): Action.FX_UNIT_1_TOGGLE,
+        (
+            Button.OPTIONS,
+            EventType.BUTTON_PRESSED,
+        ): Action.FX_UNIT_2_TOGGLE,
+        # -------------------------------------------------------------
+        # Effekt auswählen – aktuell ausgewählte Unit
+        # -------------------------------------------------------------
+        (
+            Button.DPAD_UP,
+            EventType.BUTTON_PRESSED,
+        ): Action.FX_SELECTED_EFFECT_PREVIOUS,
+        (
+            Button.DPAD_DOWN,
+            EventType.BUTTON_PRESSED,
+        ): Action.FX_SELECTED_EFFECT_NEXT,
+        # -------------------------------------------------------------
+        # FX Unit 1 – Parameter auswählen
+        # Stick links / rechts
+        # -------------------------------------------------------------
+        (
+            Axis.LEFT_X,
+            EventType.AXIS_NEGATIVE_TRIGGERED,
+        ): Action.FX_UNIT_1_PARAM_PREVIOUS,
+        (
+            Axis.LEFT_X,
+            EventType.AXIS_POSITIVE_TRIGGERED,
+        ): Action.FX_UNIT_1_PARAM_NEXT,
+        (
+            Button.L3,
+            EventType.BUTTON_PRESSED,
+        ): Action.FX_UNIT_1_TOGGLE_SELECTED_PARAM,
+        # -------------------------------------------------------------
+        # FX Unit 2 – Parameter auswählen
+        # -------------------------------------------------------------
+        (
+            Axis.RIGHT_X,
+            EventType.AXIS_NEGATIVE_TRIGGERED,
+        ): Action.FX_UNIT_2_PARAM_PREVIOUS,
+        (
+            Axis.RIGHT_X,
+            EventType.AXIS_POSITIVE_TRIGGERED,
+        ): Action.FX_UNIT_2_PARAM_NEXT,
+        (
+            Button.R3,
+            EventType.BUTTON_PRESSED,
+        ): Action.FX_UNIT_2_TOGGLE_SELECTED_PARAM,
+    },
 }
 
 

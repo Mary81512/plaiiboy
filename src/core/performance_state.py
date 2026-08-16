@@ -25,6 +25,16 @@ class EQBand(Enum):
         return labels[self]
 
 
+class FXParameter(Enum):
+    PARAM_1 = 1
+    PARAM_2 = 2
+    PARAM_3 = 3
+
+    @property
+    def label(self) -> str:
+        return f"Parameter {self.value}"
+
+
 class BrowserFocus(Enum):
     TREE = 1
     TREE_EXPANDED = 2
@@ -73,6 +83,11 @@ class PerformanceState:
     mixer_fx_b_amount: float = 0.5
 
     selected_mixer_fx_deck: Deck = Deck.DECK_1
+
+    selected_fx_unit: int = 1
+
+    fx_unit_1_parameter: FXParameter = FXParameter.PARAM_1
+    fx_unit_2_parameter: FXParameter = FXParameter.PARAM_1
 
     def toggle_active_deck(self) -> Deck:
         if self.active_deck is Deck.DECK_1:
@@ -134,3 +149,46 @@ class PerformanceState:
     ) -> Deck:
         self.selected_mixer_fx_deck = deck
         return self.selected_mixer_fx_deck
+
+    def select_fx_unit(
+        self,
+        unit: int,
+    ) -> int:
+        self.selected_fx_unit = unit
+        return self.selected_fx_unit
+
+    def move_fx_unit_1_parameter(
+        self,
+        direction: int,
+    ) -> FXParameter:
+        parameters = list(FXParameter)
+        current_index = parameters.index(self.fx_unit_1_parameter)
+
+        new_index = max(
+            0,
+            min(
+                len(parameters) - 1,
+                current_index + direction,
+            ),
+        )
+
+        self.fx_unit_1_parameter = parameters[new_index]
+        return self.fx_unit_1_parameter
+
+    def move_fx_unit_2_parameter(
+        self,
+        direction: int,
+    ) -> FXParameter:
+        parameters = list(FXParameter)
+        current_index = parameters.index(self.fx_unit_2_parameter)
+
+        new_index = max(
+            0,
+            min(
+                len(parameters) - 1,
+                current_index + direction,
+            ),
+        )
+
+        self.fx_unit_2_parameter = parameters[new_index]
+        return self.fx_unit_2_parameter

@@ -332,6 +332,80 @@ MIDI_MAPPINGS: dict[Action, MidiMapping] = {
     Action.DECK_2_EQ_LOW_TOGGLE: MidiNoteMapping(
         note=105,
     ),
+    # ---------------------------------------------------------------------
+    # Layer 3 – Single FX kontinuierlich
+    # ---------------------------------------------------------------------
+    Action.FX_UNIT_1_DRY_WET: MidiControlChangeMapping(
+        control=32,
+        relative=True,
+    ),
+    Action.FX_UNIT_2_DRY_WET: MidiControlChangeMapping(
+        control=33,
+        relative=True,
+    ),
+    Action.FX_UNIT_1_PARAM_1: MidiControlChangeMapping(
+        control=34,
+        relative=True,
+    ),
+    Action.FX_UNIT_1_PARAM_2: MidiControlChangeMapping(
+        control=35,
+        relative=True,
+    ),
+    Action.FX_UNIT_1_PARAM_3: MidiControlChangeMapping(
+        control=36,
+        relative=True,
+    ),
+    Action.FX_UNIT_2_PARAM_1: MidiControlChangeMapping(
+        control=37,
+        relative=True,
+    ),
+    Action.FX_UNIT_2_PARAM_2: MidiControlChangeMapping(
+        control=38,
+        relative=True,
+    ),
+    Action.FX_UNIT_2_PARAM_3: MidiControlChangeMapping(
+        control=39,
+        relative=True,
+    ),
+    # ---------------------------------------------------------------------
+    # Layer 3 – Single FX Buttons
+    # ---------------------------------------------------------------------
+    Action.FX_UNIT_1_TOGGLE: MidiNoteMapping(
+        note=106,
+    ),
+    Action.FX_UNIT_2_TOGGLE: MidiNoteMapping(
+        note=107,
+    ),
+    Action.FX_UNIT_1_EFFECT_PREVIOUS: MidiNoteMapping(
+        note=108,
+    ),
+    Action.FX_UNIT_1_EFFECT_NEXT: MidiNoteMapping(
+        note=109,
+    ),
+    Action.FX_UNIT_2_EFFECT_PREVIOUS: MidiNoteMapping(
+        note=110,
+    ),
+    Action.FX_UNIT_2_EFFECT_NEXT: MidiNoteMapping(
+        note=111,
+    ),
+    Action.FX_UNIT_1_BUTTON_1: MidiNoteMapping(
+        note=112,
+    ),
+    Action.FX_UNIT_1_BUTTON_2: MidiNoteMapping(
+        note=113,
+    ),
+    Action.FX_UNIT_1_BUTTON_3: MidiNoteMapping(
+        note=114,
+    ),
+    Action.FX_UNIT_2_BUTTON_1: MidiNoteMapping(
+        note=115,
+    ),
+    Action.FX_UNIT_2_BUTTON_2: MidiNoteMapping(
+        note=116,
+    ),
+    Action.FX_UNIT_2_BUTTON_3: MidiNoteMapping(
+        note=117,
+    ),
 }
 
 

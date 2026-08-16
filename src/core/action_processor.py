@@ -6,6 +6,7 @@ from core.performance_state import (
     BrowserFocus,
     Deck,
     EQBand,
+    FXParameter,
     PerformanceState,
     SeekMode,
 )
@@ -26,6 +27,8 @@ class ActionProcessor:
     VOLUME_SPEED = 0.60
     EQ_SPEED = 0.60
     MIXER_FX_SPEED = 0.50
+    FX_PARAM_SPEED = 0.60
+    FX_DRY_WET_SPEED = 0.50
 
     # Verhindert extrem große Sprünge, falls der Main-Loop
     # einmal kurz hängen sollte.
@@ -62,6 +65,21 @@ class ActionProcessor:
             Action.BROWSER_LEVEL_DOWN: self._browser_level_down,
             Action.SELECT_MIXER_FX_DECK_A: (self._select_mixer_fx_deck_a),
             Action.SELECT_MIXER_FX_DECK_B: (self._select_mixer_fx_deck_b),
+            # Layer 3 – Single FX
+            Action.SELECT_FX_UNIT_1: self._select_fx_unit_1,
+            Action.SELECT_FX_UNIT_2: self._select_fx_unit_2,
+            Action.FX_SELECTED_EFFECT_PREVIOUS: (self._fx_selected_effect_previous),
+            Action.FX_SELECTED_EFFECT_NEXT: (self._fx_selected_effect_next),
+            Action.FX_UNIT_1_PARAM_PREVIOUS: (self._fx_unit_1_param_previous),
+            Action.FX_UNIT_1_PARAM_NEXT: (self._fx_unit_1_param_next),
+            Action.FX_UNIT_2_PARAM_PREVIOUS: (self._fx_unit_2_param_previous),
+            Action.FX_UNIT_2_PARAM_NEXT: (self._fx_unit_2_param_next),
+            Action.FX_UNIT_1_TOGGLE_SELECTED_PARAM: (
+                self._fx_unit_1_toggle_selected_param
+            ),
+            Action.FX_UNIT_2_TOGGLE_SELECTED_PARAM: (
+                self._fx_unit_2_toggle_selected_param
+            ),
         }
 
     @property
@@ -274,6 +292,243 @@ class ActionProcessor:
                 axis=axis,
                 action_value=relative_value,
                 stick_value=abs(r2 - l2),
+            )
+        ]
+
+    # -------------------------------------------------------------------------
+    # Layer 3 – Single FX kontinuierlich
+    # -------------------------------------------------------------------------
+
+    def process_fx_axes(
+        self,
+        left_y: float,
+        right_y: float,
+        delta_time: float,
+    ) -> list[ActionEvent]:
+        delta_time = max(
+            0.0,
+            min(
+                delta_time,
+                self.MAX_DELTA_TIME,
+            ),
+        )
+
+        if delta_time == 0.0:
+            return []
+
+        events: list[ActionEvent] = []
+
+        # DualShock:
+        # Stick hoch = negativer Wert.
+        # Wir drehen deshalb das Vorzeichen um:
+        # hoch   -> Parameter größer
+        # runter -> Parameter kleiner
+
+        left_value = -self._apply_deadzone(left_y)
+
+        if left_value != 0.0:
+            mappings = {
+                FXParameter.PARAM_1: Action.FX_UNIT_1_PARAM_1,
+                FXParameter.PARAM_2: Action.FX_UNIT_1_PARAM_2,
+                FXParameter.PARAM_3: Action.FX_UNIT_1_PARAM_3,
+            }
+
+            relative_value = left_value * self.FX_PARAM_SPEED * delta_time
+
+            events.append(
+                self._create_axis_action(
+                    action=mappings[self._state.fx_unit_1_parameter],
+                    axis=Axis.LEFT_Y,
+                    action_value=relative_value,
+                    stick_value=left_y,
+                )
+            )
+
+        right_value = -self._apply_deadzone(right_y)
+
+        if right_value != 0.0:
+            mappings = {
+                FXParameter.PARAM_1: Action.FX_UNIT_2_PARAM_1,
+                FXParameter.PARAM_2: Action.FX_UNIT_2_PARAM_2,
+                FXParameter.PARAM_3: Action.FX_UNIT_2_PARAM_3,
+            }
+
+            relative_value = right_value * self.FX_PARAM_SPEED * delta_time
+
+            events.append(
+                self._create_axis_action(
+                    action=mappings[self._state.fx_unit_2_parameter],
+                    axis=Axis.RIGHT_Y,
+                    action_value=relative_value,
+                    stick_value=right_y,
+                )
+            )
+
+        return events
+
+    def process_fx_triggers(
+        self,
+        l2: float,
+        r2: float,
+        delta_time: float,
+    ) -> list[ActionEvent]:
+        delta_time = max(
+            0.0,
+            min(
+                delta_time,
+                self.MAX_DELTA_TIME,
+            ),
+        )
+
+        if delta_time == 0.0:
+            return []
+
+        # Wie Layer 2:
+        # L2 = weniger
+        # R2 = mehr
+        relative_value = (r2 - l2) * self.FX_DRY_WET_SPEED * delta_time
+
+        if abs(relative_value) < 0.000001:
+            return []
+
+        action = (
+            Action.FX_UNIT_1_DRY_WET
+            if self._state.selected_fx_unit == 1
+            else Action.FX_UNIT_2_DRY_WET
+        )
+
+        axis = Axis.R2 if relative_value > 0 else Axis.L2
+
+        return [
+            self._create_axis_action(
+                action=action,
+                axis=axis,
+                action_value=relative_value,
+                stick_value=abs(r2 - l2),
+            )
+        ]
+
+    def _select_fx_unit_1(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        self._state.select_fx_unit(1)
+        print("FX Steuerung: Unit 1")
+        return []
+
+    def _select_fx_unit_2(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        self._state.select_fx_unit(2)
+        print("FX Steuerung: Unit 2")
+        return []
+
+    def _fx_selected_effect_previous(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        action = (
+            Action.FX_UNIT_1_EFFECT_PREVIOUS
+            if self._state.selected_fx_unit == 1
+            else Action.FX_UNIT_2_EFFECT_PREVIOUS
+        )
+
+        return [
+            self._replace_action(
+                event=event,
+                action=action,
+            )
+        ]
+
+    def _fx_selected_effect_next(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        action = (
+            Action.FX_UNIT_1_EFFECT_NEXT
+            if self._state.selected_fx_unit == 1
+            else Action.FX_UNIT_2_EFFECT_NEXT
+        )
+
+        return [
+            self._replace_action(
+                event=event,
+                action=action,
+            )
+        ]
+
+    def _fx_unit_1_param_previous(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        parameter = self._state.move_fx_unit_1_parameter(-1)
+
+        print(f"FX Unit 1: {parameter.label}")
+
+        return []
+
+    def _fx_unit_1_param_next(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        parameter = self._state.move_fx_unit_1_parameter(1)
+
+        print(f"FX Unit 1: {parameter.label}")
+
+        return []
+
+    def _fx_unit_2_param_previous(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        parameter = self._state.move_fx_unit_2_parameter(-1)
+
+        print(f"FX Unit 2: {parameter.label}")
+
+        return []
+
+    def _fx_unit_2_param_next(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        parameter = self._state.move_fx_unit_2_parameter(1)
+
+        print(f"FX Unit 2: {parameter.label}")
+
+        return []
+
+    def _fx_unit_1_toggle_selected_param(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        mappings = {
+            FXParameter.PARAM_1: Action.FX_UNIT_1_BUTTON_1,
+            FXParameter.PARAM_2: Action.FX_UNIT_1_BUTTON_2,
+            FXParameter.PARAM_3: Action.FX_UNIT_1_BUTTON_3,
+        }
+
+        return [
+            self._replace_action(
+                event=event,
+                action=mappings[self._state.fx_unit_1_parameter],
+            )
+        ]
+
+    def _fx_unit_2_toggle_selected_param(
+        self,
+        event: ActionEvent,
+    ) -> list[ActionEvent]:
+        mappings = {
+            FXParameter.PARAM_1: Action.FX_UNIT_2_BUTTON_1,
+            FXParameter.PARAM_2: Action.FX_UNIT_2_BUTTON_2,
+            FXParameter.PARAM_3: Action.FX_UNIT_2_BUTTON_3,
+        }
+
+        return [
+            self._replace_action(
+                event=event,
+                action=mappings[self._state.fx_unit_2_parameter],
             )
         ]
 

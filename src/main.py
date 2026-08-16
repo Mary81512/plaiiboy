@@ -154,7 +154,42 @@ def run_core(
 
                 for mixer_fx_event in mixer_fx_events:
                     dispatcher.dispatch(mixer_fx_event)
+            # -------------------------------------------------------------
+            # Layer 3 – Single FX
+            # -------------------------------------------------------------
 
+            if layers.active_layer is Layer.LAYER_3 and inputs.latest_state is not None:
+                axes = inputs.latest_state.axes
+
+                fx_axis_events = action_processor.process_fx_axes(
+                    left_y=axes.get(
+                        Axis.LEFT_Y,
+                        0.0,
+                    ),
+                    right_y=axes.get(
+                        Axis.RIGHT_Y,
+                        0.0,
+                    ),
+                    delta_time=delta_time,
+                )
+
+                for fx_event in fx_axis_events:
+                    dispatcher.dispatch(fx_event)
+
+                fx_trigger_events = action_processor.process_fx_triggers(
+                    l2=axes.get(
+                        Axis.L2,
+                        0.0,
+                    ),
+                    r2=axes.get(
+                        Axis.R2,
+                        0.0,
+                    ),
+                    delta_time=delta_time,
+                )
+
+                for fx_event in fx_trigger_events:
+                    dispatcher.dispatch(fx_event)
             # -------------------------------------------------------------
             # Interface – Controllerzustand
             # -------------------------------------------------------------
