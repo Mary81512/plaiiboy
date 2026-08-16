@@ -393,7 +393,9 @@ class ActionProcessor:
     ) -> list[ActionEvent]:
         # links  -> kleiner
         # rechts -> größer
-        relative_value = value * self.EQ_SPEED * delta_time
+        adjusted_value = self._apply_deadzone(value)
+
+        relative_value = adjusted_value * self.EQ_SPEED * delta_time
 
         if abs(relative_value) < 0.000001:
             return []
@@ -753,6 +755,19 @@ class ActionProcessor:
             value=event.value,
             source_event=event.source_event,
         )
+
+    def _apply_deadzone(
+        self,
+        value: float,
+    ) -> float:
+        magnitude = abs(value)
+
+        if magnitude < self.MIXER_DEADZONE:
+            return 0.0
+
+        normalized = (magnitude - self.MIXER_DEADZONE) / (1.0 - self.MIXER_DEADZONE)
+
+        return normalized if value > 0 else -normalized
 
     def _clamp(
         self,
