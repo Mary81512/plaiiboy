@@ -42,6 +42,7 @@ class ActionProcessor:
         # Letzte Touchpad-Position pro Finger.
         # Damit wird das Touchpad relativ wie ein Scroll-Fader benutzt.
         self._touchpad_previous: dict[int, tuple[Deck, int]] = {}
+        self._fx_trigger_accumulator = 0.0
 
         self._handlers: dict[
             Action,
@@ -383,13 +384,41 @@ class ActionProcessor:
         if delta_time == 0.0:
             return []
 
-        # Wie Layer 2:
         # L2 = weniger
         # R2 = mehr
-        relative_value = (r2 - l2) * self.FX_DRY_WET_SPEED * delta_time
+        #
+        # Trigger sind analog 0.0 bis 1.0.
+        # Je weiter gedrückt, desto schneller soll sich Dry/Wet bewegen.
+        trigger_value = r2 - l2
 
-        if abs(relative_value) < 0.000001:
+        # Kleine Restwerte ignorieren.
+        if abs(trigger_value) < 0.01:
             return []
+
+        self._fx_trigger_accumulator += (
+            trigger_value * self.FX_DRY_WET_SPEED * delta_time * 60.0
+        )
+
+        # Noch nicht genug Bewegung für einen MIDI-Schritt gesammelt.
+        if abs(self._fx_trigger_accumulator) < 1.0:
+            return []
+
+        steps = int(abs(self._fx_trigger_accumulator))
+
+        steps = min(
+            steps,
+            63,
+        )
+
+        if self._fx_trigger_accumulator > 0:
+            relative_value = steps / 63.0
+            self._fx_trigger_accumulator -= steps
+            axis = Axis.R2
+
+        else:
+            relative_value = -(steps / 63.0)
+            self._fx_trigger_accumulator += steps
+            axis = Axis.L2
 
         action = (
             Action.FX_UNIT_1_DRY_WET
@@ -397,14 +426,12 @@ class ActionProcessor:
             else Action.FX_UNIT_2_DRY_WET
         )
 
-        axis = Axis.R2 if relative_value > 0 else Axis.L2
-
         return [
             self._create_axis_action(
                 action=action,
                 axis=axis,
                 action_value=relative_value,
-                stick_value=abs(r2 - l2),
+                stick_value=abs(trigger_value),
             )
         ]
 

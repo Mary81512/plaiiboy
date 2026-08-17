@@ -289,16 +289,27 @@ CONTROLLER_MAPPINGS: dict[
             EventType.BUTTON_PRESSED,
         ): Action.FX_UNIT_2_TOGGLE,
         # -------------------------------------------------------------
-        # Effekt auswählen – aktuell ausgewählte Unit
+        # FX Unit 1 – Effekt auswählen
         # -------------------------------------------------------------
         (
             Button.DPAD_UP,
             EventType.BUTTON_PRESSED,
-        ): Action.FX_SELECTED_EFFECT_PREVIOUS,
+        ): Action.FX_UNIT_1_EFFECT_PREVIOUS,
         (
             Button.DPAD_DOWN,
             EventType.BUTTON_PRESSED,
-        ): Action.FX_SELECTED_EFFECT_NEXT,
+        ): Action.FX_UNIT_1_EFFECT_NEXT,
+        # -------------------------------------------------------------
+        # FX Unit 2 – Effekt auswählen
+        # -------------------------------------------------------------
+        (
+            Button.TRIANGLE,
+            EventType.BUTTON_PRESSED,
+        ): Action.FX_UNIT_2_EFFECT_PREVIOUS,
+        (
+            Button.CROSS,
+            EventType.BUTTON_PRESSED,
+        ): Action.FX_UNIT_2_EFFECT_NEXT,
         # -------------------------------------------------------------
         # FX Unit 1 – Parameter auswählen
         # Stick links / rechts
@@ -316,7 +327,7 @@ CONTROLLER_MAPPINGS: dict[
             EventType.BUTTON_PRESSED,
         ): Action.FX_UNIT_1_TOGGLE_SELECTED_PARAM,
         # -------------------------------------------------------------
-        # FX Unit 2 – Parameter auswählen
+        # FX Unit 2 – Effekt auswählen
         # -------------------------------------------------------------
         (
             Axis.RIGHT_X,
