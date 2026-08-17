@@ -1,5 +1,8 @@
-from time import monotonic
+from collections.abc import Callable
+from time import monotonic, sleep
+from typing import TypeVar
 
+from controller.dualshock import ControllerConnectionError
 from controller.input_manager import InputManager
 from core.action_processor import ActionProcessor
 from core.actions import Action
@@ -11,6 +14,9 @@ from inputs.traktor_feedback import TraktorFeedbackInput
 from outputs.debug import DebugOutput
 from outputs.interface import InterfaceOutput
 from outputs.midi import MidiOutput
+
+
+T = TypeVar("T")
 
 
 def apply_layer_feedback(
@@ -26,6 +32,55 @@ def apply_layer_feedback(
     )
 
     print(f"Aktiver Layer: {layers.active_layer.number}")
+
+
+def run_controller_operation(
+    operation: Callable[[], T],
+    *,
+    inputs: InputManager,
+    layers: LayerManager,
+    midi_output: MidiOutput,
+    interface_output: InterfaceOutput | None,
+) -> T:
+    """Führt eine Controller-Aktion aus und verbindet bei Abbruch neu."""
+
+    try:
+        return operation()
+    except ControllerConnectionError as error:
+        print(f"\n[CONTROLLER] {error}")
+        print("[CONTROLLER] Warte auf automatische Wiederverbindung ...")
+
+    inputs.close()
+    midi_output.release_active_gate_notes()
+
+    if interface_output is not None:
+        interface_output.update_status(
+            controller="Verbindung verloren – warte auf Controller",
+        )
+
+    while True:
+        try:
+            inputs.connect()
+            apply_layer_feedback(
+                inputs=inputs,
+                layers=layers,
+            )
+        except (ControllerConnectionError, RuntimeError) as error:
+            inputs.close()
+            print(f"[CONTROLLER] Noch nicht verbunden: {error}")
+            sleep(1.0)
+            continue
+
+        print("[CONTROLLER] Verbindung wiederhergestellt.")
+
+        if interface_output is not None:
+            interface_output.update_status(controller="Verbunden")
+
+        try:
+            return operation()
+        except ControllerConnectionError as error:
+            inputs.close()
+            print(f"[CONTROLLER] Verbindung erneut verloren: {error}")
 
 
 def run_core(
@@ -82,9 +137,21 @@ def run_core(
 
             for warning_deck in track_end_warnings:
                 print(f"Track-End-Warnung: {warning_deck}")
-                inputs.rumble_track_end_warning()
+                run_controller_operation(
+                    inputs.rumble_track_end_warning,
+                    inputs=inputs,
+                    layers=layers,
+                    midi_output=midi_output,
+                    interface_output=interface_output,
+                )
 
-            controller_events = inputs.poll()
+            controller_events = run_controller_operation(
+                inputs.poll,
+                inputs=inputs,
+                layers=layers,
+                midi_output=midi_output,
+                interface_output=interface_output,
+            )
 
             # -------------------------------------------------------------
             # Zeit seit dem letzten Schleifendurchlauf
@@ -260,9 +327,15 @@ def run_core(
                 ):
                     layers.cycle()
 
-                    apply_layer_feedback(
+                    run_controller_operation(
+                        lambda: apply_layer_feedback(
+                            inputs=inputs,
+                            layers=layers,
+                        ),
                         inputs=inputs,
                         layers=layers,
+                        midi_output=midi_output,
+                        interface_output=interface_output,
                     )
 
                     if interface_output is not None:
@@ -288,8 +361,14 @@ def run_core(
                         if action_event.action is Action.FEEDBACK_ACTIVE_DECK_1:
                             print("Aktives Bearbeitungsdeck: 1")
 
-                            inputs.rumble_pulses(
-                                pulse_count=1,
+                            run_controller_operation(
+                                lambda: inputs.rumble_pulses(
+                                    pulse_count=1,
+                                ),
+                                inputs=inputs,
+                                layers=layers,
+                                midi_output=midi_output,
+                                interface_output=interface_output,
                             )
 
                             if interface_output is not None:

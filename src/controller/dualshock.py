@@ -20,6 +20,10 @@ from controller_config import (
 from core.events import Axis, Button
 
 
+class ControllerConnectionError(RuntimeError):
+    """Der Controller wurde während des Betriebs getrennt."""
+
+
 class DualShock4:
     KEEP_ALIVE_INTERVAL = 30.0
 
@@ -86,7 +90,7 @@ class DualShock4:
         except OSError as error:
             self.close()
 
-            raise RuntimeError(
+            raise ControllerConnectionError(
                 "Verbindung zum Controller wurde unterbrochen."
             ) from error
 
@@ -152,17 +156,21 @@ class DualShock4:
 
         time.sleep(delay)
 
-        self.set_rumble(
-            small_motor=strength,
-            large_motor=0,
-        )
+        for pulse_index in range(pulse_count):
+            self.set_rumble(
+                small_motor=strength,
+                large_motor=0,
+            )
 
-        time.sleep(duration)
+            time.sleep(duration)
 
-        self.set_rumble(
-            small_motor=0,
-            large_motor=0,
-        )
+            self.set_rumble(
+                small_motor=0,
+                large_motor=0,
+            )
+
+            if pulse_index < pulse_count - 1:
+                time.sleep(delay)
 
     def rumble_track_end_warning(self) -> None:
         wave_count = 2
@@ -181,7 +189,7 @@ class DualShock4:
                     large_motor=0,
                 )
 
-                if pulse_index < 2:
+                if pulse_index < 1:
                     time.sleep(0.18)
 
             if wave_index < wave_count - 1:
@@ -225,12 +233,14 @@ class DualShock4:
         except OSError as error:
             self.close()
 
-            raise RuntimeError(
+            raise ControllerConnectionError(
                 "Der Bluetooth-Output-Report konnte nicht gesendet werden."
             ) from error
 
         if written <= 0:
-            raise RuntimeError(
+            self.close()
+
+            raise ControllerConnectionError(
                 "Der Controller hat den Bluetooth-Output-Report nicht angenommen."
             )
         self._last_output_report_at = time.monotonic()

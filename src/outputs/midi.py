@@ -431,6 +431,7 @@ class MidiOutput(Output):
 
         self._debug = debug
         self._port: mido.ports.BaseOutput | None = None
+        self._active_gate_notes: set[tuple[int, int]] = set()
 
     @property
     def connected(self) -> bool:
@@ -506,6 +507,7 @@ class MidiOutput(Output):
                 velocity=mapping.velocity,
                 channel=mapping.channel,
             )
+            gate_is_active = True
 
         elif event_type is EventType.BUTTON_RELEASED:
             message = mido.Message(  # type: ignore[attr-defined]
@@ -514,6 +516,7 @@ class MidiOutput(Output):
                 velocity=0,
                 channel=mapping.channel,
             )
+            gate_is_active = False
 
         else:
             if self._debug:
@@ -527,6 +530,31 @@ class MidiOutput(Output):
             return
 
         self._send_message(message)
+
+        gate = (mapping.note, mapping.channel)
+
+        if gate_is_active:
+            self._active_gate_notes.add(gate)
+        else:
+            self._active_gate_notes.discard(gate)
+
+    def release_active_gate_notes(self) -> None:
+        """Verhindert hängende Gate-Noten nach einem Controller-Abbruch."""
+
+        if self._port is None:
+            self._active_gate_notes.clear()
+            return
+
+        for note, channel in sorted(self._active_gate_notes):
+            self._send_message(
+                mido.Message(  # type: ignore[attr-defined]
+                    "note_off",
+                    note=note,
+                    velocity=0,
+                    channel=channel,
+                )
+            )
+            self._active_gate_notes.discard((note, channel))
 
     def _send_pulse_note(
         self,
@@ -653,6 +681,7 @@ class MidiOutput(Output):
         if self._port is None:
             return
 
+        self.release_active_gate_notes()
         self._port.close()
         self._port = None
 

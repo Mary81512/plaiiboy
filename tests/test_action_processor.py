@@ -93,7 +93,7 @@ def test_seek_uses_active_deck() -> None:
     assert all(event.action is Action.DECK_1_SEEK_FINE_FORWARD for event in events)
 
 
-def test_seek_speed_changes_pulse_count() -> None:
+def test_seek_mode_changes_mapped_action() -> None:
     processor = ActionProcessor()
 
     slow_events = processor.process(
@@ -112,5 +112,9 @@ def test_seek_speed_changes_pulse_count() -> None:
         )
     )
 
-    assert len(slow_events) == 1
-    assert len(faster_events) == 4
+    assert [event.action for event in slow_events] == [
+        Action.DECK_1_SEEK_FINE_FORWARD,
+    ]
+    assert [event.action for event in faster_events] == [
+        Action.DECK_1_SEEK_4_BARS_FORWARD,
+    ]
